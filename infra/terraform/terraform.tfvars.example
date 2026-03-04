@@ -1,32 +1,28 @@
-# Sample Terraform variables file
-# Copy this to terraform.tfvars and fill in your values
-
-# AWS Configuration
-aws_region    = "us-east-1"
-environment   = "production"
+aws_region    = "ap-south-1"
+environment   = "dev"
 project_name  = "payintelli"
 
-# Database Configuration
-db_instance_class    = "db.t3.micro"
+# Database
+db_instance_class    = "db.t4g.micro"
 db_allocated_storage = 20
-db_name              = "payintelli"
-db_username          = "payintelli_admin"
-db_password          = "your-secure-password-here"
+db_name              = "PiResearchLabs"
+db_username          = "PiResearchAdmin"
+db_password          = "PiResearchLabs2026@"
 
-# Cognito Configuration
+# Cognito
 cognito_pool_name   = "payintelli-users"
 cognito_client_name = "payintelli-app"
 
-# S3 Configuration
-materials_bucket_name = "payintelli-materials"
+# S3
+materials_bucket_name = "piresearchlabs-materials"
 
-# Lambda Configuration
+# Lambda
 lambda_timeout     = 30
-lambda_memory_size = 256
+lambda_memory_size = 512
 python_runtime     = "python3.12"
 
-# VPC Configuration (required)
-vpc_id              = "vpc-xxxxxxxx"
-private_subnet_1_id = "subnet-xxxxxxxx"
-private_subnet_2_id = "subnet-xxxxxxxx"
-vpc_cidr           = "10.0.0.0/16"
+# VPC
+vpc_id              = "vpc-02ab30d45a5f5ec3d"
+private_subnet_1_id = "subnet-01c946c4ef99f7c58"
+private_subnet_2_id = "subnet-0b147e771e6cde399"
+vpc_cidr            = "10.0.0.0/16"

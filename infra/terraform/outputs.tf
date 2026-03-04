@@ -49,12 +49,6 @@ output "materials_bucket" {
   value       = aws_s3_bucket.materials.id
 }
 
-# Lambda
-output "lambda_role_arn" {
-  description = "Lambda execution role ARN"
-  value       = aws_iam_role.lambda_exec.arn
-}
-
 output "events_function_arn" {
   description = "Events Lambda function ARN"
   value       = aws_lambda_function.events.arn
