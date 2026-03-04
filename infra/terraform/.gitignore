@@ -1,0 +1,18 @@
+# Terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+.terraform/
+terraform.tfstate.d/
+
+# Secrets
+*.pem
+*.key
+
+# Local config (contains sensitive data)
+local.tfvars
+
+# IDE
+.idea/
+.vscode/

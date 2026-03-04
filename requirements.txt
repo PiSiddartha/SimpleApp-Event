@@ -1,0 +1,14 @@
+# PayIntelli Academy - Lambda Dependencies
+
+# Database
+psycopg2-binary==2.9.9
+
+# JWT Authentication
+PyJWT==2.8.0
+requests==2.31.0
+
+# AWS SDK
+boto3==1.34.0
+
+# QR Code Generation
+qrcode[pil]==7.4.2
