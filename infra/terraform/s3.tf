@@ -46,6 +46,9 @@ resource "aws_s3_bucket_lifecycle_configuration" "materials" {
   rule {
     id     = "archive-old-materials"
     status = "Enabled"
+    filter {
+      prefix = ""
+    }
 
     transition {
       days          = 90

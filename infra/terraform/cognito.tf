@@ -36,8 +36,7 @@ resource "aws_cognito_user_pool" "main" {
 
   # Device tracking
   device_configuration {
-    challenge_required_on_new_device      = true
-    device_only_trusted_authentication_remediation = "DEFAULT"
+    challenge_required_on_new_device = true
   }
 
   # Tags
@@ -60,27 +59,16 @@ resource "aws_cognito_user_pool_client" "main" {
   allowed_oauth_flows_user_pool_client = true
   allowed_oauth_scopes                = ["phone", "email", "openid", "profile", "aws.cognito.signin.user.admin"]
 
-  # Token settings
-  access_tokenValidity  = 1
-  id_tokenValidity     = 1
-  refresh_tokenValidity = 30
+  # Token settings (in hours)
+  access_token_validity  = 1
+  id_token_validity     = 1
+  refresh_token_validity = 30
 
   # Enable token refresh
   enable_token_revocation = true
 
-  # Analytics
-  analytics_configuration {
-    application_id = aws_cognito_user_pool_client.main.id
-    # external_id    = ""
-    # user_data      = ""
-  }
-
   # Security
   prevent_user_existence_errors = "ENABLED"
-
-  tags = {
-    Name = var.cognito_client_name
-  }
 }
 
 # Cognito Identity Pool (for unauthenticated access if needed)
