@@ -56,9 +56,16 @@ resource "aws_cognito_user_pool_client" "main" {
   user_pool_id        = aws_cognito_user_pool.main.id
 
   # OAuth settings
+  # Callback URLs: where Cognito redirects after sign-in (Hosted UI).
+  # Sign out URLs: where Cognito may redirect after sign-out; must match logout_uri/redirect_uri in app.
   supported_identity_providers = ["COGNITO"]
-  callback_urls            = ["https://app.payintelli.com/callback", "http://localhost:3000/callback"]
-  logout_urls             = ["https://app.payintelli.com/logout", "http://localhost:3000/logout"]
+  callback_urls = ["https://app.payintelli.com/callback", "http://localhost:3000/callback"]
+  logout_urls   = [
+    "https://app.payintelli.com/logout",
+    "http://localhost:3000/logout",
+    "https://app.payintelli.com/login",
+    "http://localhost:3000/login",
+  ]
 
   allowed_oauth_flows                  = ["code", "implicit"]
   allowed_oauth_flows_user_pool_client = true

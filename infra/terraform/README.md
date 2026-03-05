@@ -81,6 +81,15 @@ terraform apply
 - **Cognito `Domain already associated with another user pool`**: The default domain is now `project_name-account_id` (e.g. `payintelli-442042527593`). To use a custom name, set `cognito_domain` in `terraform.tfvars`.
 - **Cognito Identity, S3, or Lambda AccessDenied** (e.g. `lambda:ListVersionsByFunction`): Ensure Terraform uses the `jm` profile—unset `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY`/`AWS_SESSION_TOKEN` and set `AWS_PROFILE=jm`, or use `./run_terraform.sh`. If the policy is missing Lambda, attach/update with `iam-inline-policy-terraform-1.json`.
 
+## Cognito callback and sign-out URLs
+
+The app client’s **Callback URL(s)** and **Sign out URL(s)** must match exactly what the app uses, or you’ll see `redirect_mismatch` on login/logout. In `cognito.tf`:
+
+- **callback_urls**: where Cognito redirects after sign-in (e.g. `/callback`).
+- **logout_urls**: where Cognito may redirect after sign-out. The app sends `logout_uri`/`redirect_uri` = `${appUrl}/logout`; that URL must be in this list. `/login` is also allowed so you can redirect to login after logout if needed.
+
+If you add a new origin (e.g. staging), add its callback and logout URLs to these lists and re-apply.
+
 ## Cognito groups (admin vs mobile)
 
 The same User Pool is used for both the **admin dashboard** and the **mobile app**. Two groups (**Admins**, **Students**) must exist; Terraform does not create them (to avoid needing extra IAM permissions). Create them once after the first apply:

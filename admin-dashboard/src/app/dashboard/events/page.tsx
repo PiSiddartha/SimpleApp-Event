@@ -42,9 +42,8 @@ export default function EventsPage() {
   };
 
   return (
-    <div className="w-full">
-      <header className="mb-8">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="space-y-6">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-gray-900">Events</h1>
             <p className="mt-1 text-sm text-gray-500">Create and manage your events</p>
@@ -56,7 +55,6 @@ export default function EventsPage() {
             <Plus size={18} aria-hidden />
             Create Event
           </button>
-        </div>
       </header>
 
       {isLoading ? (

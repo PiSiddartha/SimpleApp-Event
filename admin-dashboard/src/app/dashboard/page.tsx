@@ -11,13 +11,13 @@ export default function DashboardPage() {
   const eventIds = events?.slice(0, 3).map((e: any) => e.id) || [];
   
   return (
-    <div className="max-w-6xl">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-1">Overview of your events and engagement</p>
-      </div>
+    <div className="space-y-6">
+      <header>
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Dashboard</h1>
+        <p className="mt-1 text-sm text-gray-500">Overview of your events and engagement</p>
+      </header>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Events"
           value={isLoading ? '—' : events?.length ?? 0}
@@ -88,7 +88,7 @@ function StatCard({
 }: {
   title: string;
   value: string | number;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: React.ElementType;
   color: string;
   iconColor: string;
 }) {

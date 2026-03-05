@@ -13,8 +13,8 @@ export default function DashboardLayout({
         <Navbar />
         <div className="flex flex-1 min-h-0">
           <Sidebar />
-          <main className="flex-1 min-w-0 overflow-auto">
-            <div className="p-6 sm:p-8 max-w-[1600px] mx-auto">
+          <main className="flex-1 min-w-0 overflow-auto bg-gray-50/80">
+            <div className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8" data-dashboard-content>
               {children}
             </div>
           </main>

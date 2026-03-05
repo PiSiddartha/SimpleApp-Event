@@ -37,16 +37,16 @@ export default function CallbackPage() {
         const session = await fetchAuthSession();
         const accessToken = session.tokens?.accessToken?.toString();
         const idToken = session.tokens?.idToken?.toString();
-        if (accessToken && typeof window !== 'undefined') {
-          // cognito:groups is in ID token (and sometimes access token)
-          const tokenToCheck = idToken || accessToken;
-          if (!isAdminFromToken(tokenToCheck)) {
+        const tokenToStore = idToken || accessToken;
+        if (tokenToStore && typeof window !== 'undefined') {
+          // cognito:groups is in ID token; backend needs it for admin role
+          if (!isAdminFromToken(tokenToStore)) {
             await signOut();
             done.current = true;
             setError('Access denied. This app is for admin users only. Add your account to the "Admins" group in Cognito to sign in here.');
             return;
           }
-          localStorage.setItem('auth_token', accessToken);
+          localStorage.setItem('auth_token', tokenToStore);
           done.current = true;
           router.replace('/dashboard');
         }

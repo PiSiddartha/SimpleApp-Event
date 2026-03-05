@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useEvents } from '@/hooks/useEvents';
 import { useMaterials, useDeleteMaterial, useDownloadUrl } from '@/hooks/useMaterials';
 import { MaterialUploader, MaterialListItem } from '@/components/MaterialUploader';
-import { Loader2 } from 'lucide-react';
+import { Loader2, FileText } from 'lucide-react';
 
 export default function MaterialsPage() {
   const { data: events } = useEvents();
@@ -13,31 +13,35 @@ export default function MaterialsPage() {
   const deleteMaterial = useDeleteMaterial();
 
   return (
-    <div className="w-full max-w-4xl">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Materials</h1>
-        <p className="text-sm text-gray-500 mt-1">Upload and manage event materials</p>
-      </div>
+    <div className="space-y-6">
+      <header>
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Materials</h1>
+        <p className="mt-1 text-sm text-gray-500">Upload and manage event materials</p>
+      </header>
 
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-2">Select Event</label>
+      <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <label htmlFor="materials-event-select" className="block text-sm font-medium text-gray-700 mb-2">
+          Select Event
+        </label>
+        <p className="mb-3 text-sm text-gray-500">Pick an event to upload files or view its materials.</p>
         <select
+          id="materials-event-select"
           value={selectedEvent}
           onChange={(e) => setSelectedEvent(e.target.value)}
-          className="w-full max-w-md px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white"
+          className="w-full max-w-md rounded-lg border border-gray-300 bg-white px-3 py-2.5 focus:border-primary-500 focus:ring-2 focus:ring-primary-500"
         >
           <option value="">Choose an event…</option>
-          {events?.map((event: any) => (
+          {Array.isArray(events) && events.map((event: any) => (
             <option key={event.id} value={event.id}>
               {event.name}
             </option>
           ))}
         </select>
-      </div>
+      </section>
 
-      {selectedEvent && (
+      {selectedEvent ? (
         <>
-          <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-6">
+          <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-gray-900 mb-1">Upload Material</h2>
             <p className="text-sm text-gray-500 mb-4">Add a new material or upload link for this event</p>
             <MaterialUploader eventId={selectedEvent} onSuccess={() => refetch()} />
@@ -74,11 +78,17 @@ export default function MaterialsPage() {
             </div>
           </div>
         </>
-      )}
-
-      {!selectedEvent && (
-        <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-gray-500">
-          <p>Select an event above to upload and manage materials</p>
+      ) : (
+        <div className="rounded-xl border border-gray-200 bg-white shadow-sm">
+          <div className="flex flex-col items-center justify-center px-8 py-14 text-center sm:py-16">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-100">
+              <FileText size={32} className="text-gray-400" aria-hidden />
+            </div>
+            <h2 className="text-lg font-semibold text-gray-900">Choose an event</h2>
+            <p className="mt-2 max-w-sm text-sm text-gray-500">
+              Select an event from the dropdown above to upload materials and manage files for that event.
+            </p>
+          </div>
         </div>
       )}
     </div>

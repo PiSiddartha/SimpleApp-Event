@@ -42,10 +42,11 @@ class ApiService {
     );
   }
 
-  // Events
+  // Events (backend may wrap list in { data: [...] })
   async getEvents() {
     const response = await this.client.get('/events');
-    return response.data;
+    const raw = response.data;
+    return Array.isArray(raw) ? raw : raw?.data ?? raw?.events ?? [];
   }
 
   async getEvent(id: string) {

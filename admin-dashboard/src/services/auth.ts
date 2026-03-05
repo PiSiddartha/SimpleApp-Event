@@ -9,9 +9,10 @@ class AuthService {
         password,
       });
       
-      // Get tokens
+      // Get tokens (use ID token for API so backend gets cognito:groups for admin role)
       const session = await fetchAuthSession();
-      const token = session.tokens?.accessToken?.toString();
+      const idToken = session.tokens?.idToken?.toString();
+      const token = idToken || session.tokens?.accessToken?.toString();
       
       if (token) {
         localStorage.setItem('auth_token', token);
@@ -56,10 +57,11 @@ class AuthService {
       const domain = process.env.NEXT_PUBLIC_COGNITO_DOMAIN || 'payintelli-442042527593';
       const region = process.env.NEXT_PUBLIC_COGNITO_REGION || 'ap-south-1';
       const clientId = process.env.NEXT_PUBLIC_COGNITO_APP_CLIENT_ID || '';
-      const loginUrl = `${appUrl}/login`;
-      const logoutUri = encodeURIComponent(loginUrl);
-      const redirectUri = encodeURIComponent(loginUrl);
-      window.location.href = `https://${domain}.auth.${region}.amazoncognito.com/logout?client_id=${clientId}&logout_uri=${logoutUri}&redirect_uri=${redirectUri}`;
+      // Must match Cognito app client "Sign out URL(s)" (logout_urls) exactly
+      const signOutUrl = `${appUrl}/logout`;
+      const logoutUri = encodeURIComponent(signOutUrl);
+      const redirectUri = encodeURIComponent(signOutUrl);
+      window.location.href = `https://${domain}.auth.${region}.amazoncognito.com/logout?client_id=${clientId}&logout_uri=${logoutUri}&redirect_uri=${redirectUri}&response_type=code`;
     }
     return { success: true };
   }

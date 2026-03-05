@@ -1,13 +1,16 @@
 'use client';
 
 import { useState } from 'react';
+import { useEvents } from '@/hooks/useEvents';
 import { usePolls, usePollResults, useCreatePoll } from '@/hooks/usePolls';
 import { PollForm } from '@/components/PollForm';
 import { Plus, Vote, Loader2 } from 'lucide-react';
 import { Modal } from '@/components/Modal';
 
 export default function PollsPage() {
-  const { data: pollsData, isLoading } = usePolls();
+  const { data: events } = useEvents();
+  const [selectedEvent, setSelectedEvent] = useState<string>('');
+  const { data: pollsData, isLoading } = usePolls(selectedEvent || undefined);
   const polls = pollsData?.polls || pollsData || [];
   const [showModal, setShowModal] = useState(false);
   const [selectedPoll, setSelectedPoll] = useState<string | null>(null);
@@ -17,31 +20,60 @@ export default function PollsPage() {
   const totalVotes = pollResults?.results?.reduce((sum: number, r: any) => sum + r.votes, 0) ?? 0;
 
   return (
-    <div className="w-full max-w-4xl">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Polls</h1>
-          <p className="text-sm text-gray-500 mt-1">Create and view poll results</p>
-        </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center justify-center gap-2 px-4 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors shadow-sm"
-        >
-          <Plus size={18} />
-          Create Poll
-        </button>
-      </div>
+    <div className="space-y-6">
+      <header>
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Polls</h1>
+        <p className="mt-1 text-sm text-gray-500">Create and view poll results</p>
+      </header>
 
-      {isLoading ? (
-        <div className="flex items-center justify-center py-16 rounded-xl border border-gray-200 bg-white">
-          <Loader2 className="animate-spin text-primary-500" size={28} />
+      <section className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+        <label htmlFor="polls-event-select" className="block text-sm font-medium text-gray-700 mb-2">
+          Select Event
+        </label>
+        <p className="mb-3 text-sm text-gray-500">Pick an event to view its polls and create new ones.</p>
+        <select
+          id="polls-event-select"
+          value={selectedEvent}
+          onChange={(e) => setSelectedEvent(e.target.value)}
+          className="w-full max-w-md rounded-lg border border-gray-300 bg-white px-3 py-2.5 focus:border-primary-500 focus:ring-2 focus:ring-primary-500"
+        >
+          <option value="">Choose an event…</option>
+          {Array.isArray(events) && events.map((event: any) => (
+            <option key={event.id} value={event.id}>
+              {event.name}
+            </option>
+          ))}
+        </select>
+      </section>
+
+      {!selectedEvent ? (
+        <div className="rounded-xl border border-gray-200 bg-white p-12 text-center shadow-sm">
+          <p className="text-gray-600 font-medium">Select an event</p>
+          <p className="mt-2 text-sm text-gray-500">Choose an event above to view and create polls.</p>
         </div>
       ) : (
+        <>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-lg font-semibold text-gray-900">Polls for this event</h2>
+            <button
+              onClick={() => setShowModal(true)}
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 font-medium text-white shadow-sm transition-colors hover:bg-primary-700"
+            >
+              <Plus size={18} aria-hidden />
+              Create Poll
+            </button>
+          </div>
+
+          {isLoading ? (
+            <div className="flex items-center justify-center rounded-xl border border-gray-200 bg-white py-20 shadow-sm">
+              <Loader2 className="animate-spin text-primary-500" size={32} aria-hidden />
+            </div>
+          ) : (
         <div className="space-y-4">
           {polls.map((poll: any) => (
             <div
               key={poll.id}
-              className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 hover:border-gray-300 transition-colors"
+              className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm transition-colors hover:border-gray-300 hover:shadow"
             >
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                 <div className="min-w-0 flex-1">
@@ -69,27 +101,29 @@ export default function PollsPage() {
           ))}
 
           {polls.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-16 rounded-xl border border-gray-200 bg-white text-center">
-              <p className="text-gray-500 mb-2">No polls yet</p>
-              <p className="text-sm text-gray-400 mb-4">Create a poll to collect responses from attendees</p>
+            <div className="rounded-xl border border-gray-200 bg-white p-12 text-center shadow-sm">
+              <p className="text-gray-600 font-medium">No polls yet</p>
+              <p className="mt-2 text-sm text-gray-500">Create a poll to collect responses from attendees.</p>
               <button
                 onClick={() => setShowModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700"
+                className="mt-6 inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 font-medium text-white transition-colors hover:bg-primary-700"
               >
-                <Plus size={18} />
+                <Plus size={18} aria-hidden />
                 Create Poll
               </button>
             </div>
           )}
         </div>
+          )}
+        </>
       )}
 
-      {showModal && (
+      {showModal && selectedEvent && (
         <Modal onClose={() => setShowModal(false)}>
           <div className="p-6 sm:p-8">
             <h2 className="text-xl font-bold text-gray-900 mb-1">Create Poll</h2>
-            <p className="text-sm text-gray-500 mb-6">Add a question and options for your event</p>
-            <PollForm eventId="default" onSuccess={() => setShowModal(false)} />
+            <p className="text-sm text-gray-500 mb-6">Add a question and options for this event</p>
+            <PollForm eventId={selectedEvent} onSuccess={() => setShowModal(false)} />
           </div>
         </Modal>
       )}
