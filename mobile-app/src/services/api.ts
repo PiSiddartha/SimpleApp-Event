@@ -1,7 +1,8 @@
 // API service
 import axios, { AxiosInstance, AxiosError } from 'axios';
+import { authService } from './auth';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://api.payintelli.com/v1';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://ggszk3v52a.execute-api.ap-south-1.amazonaws.com';
 
 class ApiService {
   private client: AxiosInstance;
@@ -12,6 +13,15 @@ class ApiService {
       headers: {
         'Content-Type': 'application/json',
       },
+    });
+
+    // Attach auth token to requests
+    this.client.interceptors.request.use(async (config) => {
+      const token = await authService.getToken();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
     });
 
     // Handle auth errors
@@ -37,9 +47,9 @@ class ApiService {
     return response.data;
   }
 
-  // Attendance
+  // Attendance — backend route is POST /events/{event_id}/join
   async joinEvent(eventId: string) {
-    const response = await this.client.post(`/attendance/join`, { event_id: eventId });
+    const response = await this.client.post(`/events/${eventId}/join`);
     return response.data;
   }
 

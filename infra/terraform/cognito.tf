@@ -1,5 +1,10 @@
 # Cognito User Pool for PayIntelli Academy
 
+# Unique domain for hosted UI (Cognito domains are unique per account/region; default includes account ID to avoid conflicts)
+locals {
+  cognito_domain = var.cognito_domain != "" ? var.cognito_domain : "${var.project_name}-${data.aws_caller_identity.current.account_id}"
+}
+
 # Cognito User Pool
 resource "aws_cognito_user_pool" "main" {
   name = var.cognito_pool_name
@@ -89,6 +94,9 @@ resource "aws_cognito_identity_pool" "main" {
 
 # User Pool Domain
 resource "aws_cognito_user_pool_domain" "main" {
-  domain       = var.project_name
+  domain       = local.cognito_domain
   user_pool_id = aws_cognito_user_pool.main.id
 }
+
+# Cognito groups (Admins, Students) are created by scripts/create_cognito_groups.sh
+# so Terraform does not require cognito-idp:GetGroup/CreateGroup. Run after first apply.

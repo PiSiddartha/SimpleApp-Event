@@ -116,8 +116,8 @@ resource "aws_iam_policy" "lambda_s3" {
           "s3:ListBucket"
         ]
         Resource = [
-          "arn:aws:s3:::${var.materials_bucket_name}",
-          "arn:aws:s3:::${var.materials_bucket_name}/*"
+          aws_s3_bucket.materials.arn,
+          "${aws_s3_bucket.materials.arn}/*"
         ]
       }
     ]

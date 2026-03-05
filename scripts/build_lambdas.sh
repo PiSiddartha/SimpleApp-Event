@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Build Lambda deployment packages (zip = package + shared + dependencies).
+# Run from repo root. Outputs: lambdas/events.zip, lambdas/attendance.zip, etc.
+
+set -euo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+LAMBDAS_DIR="$REPO_ROOT/lambdas"
+SHARED_DIR="$REPO_ROOT/shared"
+REQUIREMENTS="$REPO_ROOT/requirements.txt"
+BUILD_DIR="$REPO_ROOT/build_lambda"
+LAMBDA_NAMES=(events attendance polls materials analytics)
+
+cd "$REPO_ROOT"
+
+# Install dependencies for Lambda runtime (Linux, Python 3.12) so we get pre-built
+# wheels and avoid compiling psycopg2 etc. on the host.
+echo "Installing dependencies for Lambda (Linux, Python 3.12)..."
+rm -rf "$BUILD_DIR"
+mkdir -p "$BUILD_DIR"
+pip install -q -r "$REQUIREMENTS" -t "$BUILD_DIR" --upgrade \
+  --platform manylinux2014_x86_64 --python-version 3.12 --only-binary=:all: 2>/dev/null || \
+  pip install -q -r "$REQUIREMENTS" -t "$BUILD_DIR" --upgrade
+
+# Copy shared module into build dir
+echo "Adding shared module..."
+cp -r "$SHARED_DIR" "$BUILD_DIR/shared"
+
+for name in "${LAMBDA_NAMES[@]}"; do
+  echo "Building $name.zip..."
+  # Copy this Lambda's package into build dir
+  rm -rf "$BUILD_DIR/$name"
+  cp -r "$LAMBDAS_DIR/$name" "$BUILD_DIR/$name"
+  # Zip contents of build dir (so zip root has shared/, events/, psycopg2/, etc.)
+  (cd "$BUILD_DIR" && zip -rq "$LAMBDAS_DIR/$name.zip" . -x "*.pyc" -x "__pycache__/*" -x "*__pycache__*")
+  # Remove this package so next iteration gets a clean copy
+  rm -rf "$BUILD_DIR/$name"
+done
+
+# Remove shared so we don't leave it in build_dir for next run
+rm -rf "$BUILD_DIR/shared"
+echo "Done. Zips: $LAMBDAS_DIR/*.zip"

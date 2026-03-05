@@ -19,11 +19,11 @@ export async function generateQRCode(data: string): Promise<string> {
 }
 
 export function getEventJoinUrl(eventId: string): string {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.payintelli.com';
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   return `${baseUrl}/join/${eventId}`;
 }
 
 export function getEventQRUrl(eventId: string): string {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.payintelli.com';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ggszk3v52a.execute-api.ap-south-1.amazonaws.com';
   return `${apiUrl}/events/${eventId}`;
 }

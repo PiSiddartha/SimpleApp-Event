@@ -1,0 +1,101 @@
+'use client';
+
+import { useEffect, useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { fetchAuthSession, signOut } from 'aws-amplify/auth';
+import { Hub } from 'aws-amplify/utils';
+import { Loader2 } from 'lucide-react';
+import '@/app/amplify-config';
+import 'aws-amplify/auth/enable-oauth-listener';
+import { isAdminFromToken } from '@/utils/jwt';
+
+function getCodeFromUrl(): string | null {
+  if (typeof window === 'undefined') return null;
+  const params = new URLSearchParams(window.location.search);
+  return params.get('code');
+}
+
+export default function CallbackPage() {
+  const router = useRouter();
+  const [error, setError] = useState('');
+  const done = useRef(false);
+
+  useEffect(() => {
+    if (done.current) return;
+    // Read code from URL (window.location) so we don't depend on useSearchParams timing
+    const code = getCodeFromUrl();
+    if (!code) {
+      const showNoCode = () =>
+        setError('No authorization code received. Use the login page and click "Sign in with Cognito"—do not open this page directly. If you were redirected here after signing in, ensure the app URL is http://localhost:3000 and Cognito callback is exactly http://localhost:3000/callback.');
+      const t = setTimeout(showNoCode, 300);
+      return () => clearTimeout(t);
+    }
+
+    const storeTokenAndRedirect = async () => {
+      if (done.current) return;
+      try {
+        const session = await fetchAuthSession();
+        const accessToken = session.tokens?.accessToken?.toString();
+        const idToken = session.tokens?.idToken?.toString();
+        if (accessToken && typeof window !== 'undefined') {
+          // cognito:groups is in ID token (and sometimes access token)
+          const tokenToCheck = idToken || accessToken;
+          if (!isAdminFromToken(tokenToCheck)) {
+            await signOut();
+            done.current = true;
+            setError('Access denied. This app is for admin users only. Add your account to the "Admins" group in Cognito to sign in here.');
+            return;
+          }
+          localStorage.setItem('auth_token', accessToken);
+          done.current = true;
+          router.replace('/dashboard');
+        }
+      } catch (_) {
+        // Session not ready yet
+      }
+    };
+
+    const hubListener = ({ payload }: { payload: { event: string } }) => {
+      if (payload.event === 'signInWithRedirect' || payload.event === 'signedIn') {
+        storeTokenAndRedirect();
+      }
+    };
+
+    // Hub.listen returns an unsubscribe function in Amplify v6 (no Hub.remove)
+    const unsubscribe = Hub.listen('auth', hubListener);
+
+    // Also try once after a short delay (in case listener already ran)
+    const t = setTimeout(() => storeTokenAndRedirect(), 1500);
+
+    return () => {
+      typeof unsubscribe === 'function' && unsubscribe();
+      clearTimeout(t);
+    };
+  }, [router]);
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="max-w-md w-full p-8 sm:p-10 bg-white rounded-xl shadow-sm border border-gray-200 text-center">
+          <h1 className="text-xl font-bold text-gray-900 mb-2">Sign-in issue</h1>
+          <p className="text-red-600 text-sm mb-6">{error}</p>
+          <a
+            href="/login"
+            className="inline-flex items-center justify-center w-full px-4 py-3 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors"
+          >
+            Back to sign in
+          </a>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+      <div className="max-w-md w-full p-8 sm:p-10 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col items-center gap-4 text-center">
+        <Loader2 size={32} className="animate-spin text-primary-500" />
+        <p className="text-gray-600">Completing sign-in…</p>
+      </div>
+    </div>
+  );
+}

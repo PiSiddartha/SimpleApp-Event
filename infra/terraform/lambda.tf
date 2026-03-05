@@ -1,15 +1,31 @@
 # Lambda Functions for PayIntelli Academy
+#
+# Lambda deployment packages (lambdas/*.zip) are built by scripts/build_lambdas.sh.
+# Terraform runs that script automatically before creating/updating Lambdas so
+# that each zip contains: that Lambda's code + shared/ + requirements.txt deps.
+
+resource "null_resource" "build_lambdas" {
+  # Run build before any Lambda is created/updated. Change this value to force a rebuild.
+  triggers = {
+    run_build = var.lambda_build_trigger
+  }
+
+  provisioner "local-exec" {
+    command     = "bash ${path.module}/../../scripts/build_lambdas.sh"
+    working_dir = path.module
+  }
+}
 
 # Common environment variables for all lambdas
 locals {
+  # AWS_REGION is reserved by Lambda and set automatically; do not add it here.
   lambda_env = {
-    AWS_REGION              = var.aws_region
     DB_HOST                = aws_db_instance.main.address
     DB_PORT                = "5432"
     DB_NAME                = var.db_name
     DB_USER                = var.db_username
     DB_PASSWORD            = var.db_password
-    S3_MATERIALS_BUCKET    = var.materials_bucket_name
+    S3_MATERIALS_BUCKET    = aws_s3_bucket.materials.id
     COGNITO_USER_POOL_ID   = aws_cognito_user_pool.main.id
     COGNITO_APP_CLIENT_ID  = aws_cognito_user_pool_client.main.id
     CORS_ORIGIN            = "*"
@@ -32,6 +48,7 @@ resource "aws_lambda_function" "events" {
   }
 
   depends_on = [
+    null_resource.build_lambdas,
     aws_iam_role_policy_attachment.lambda_basic,
     aws_iam_role_policy_attachment.lambda_rds,
     aws_iam_role_policy_attachment.lambda_secrets,
@@ -61,6 +78,7 @@ resource "aws_lambda_function" "attendance" {
   }
 
   depends_on = [
+    null_resource.build_lambdas,
     aws_iam_role_policy_attachment.lambda_basic,
     aws_iam_role_policy_attachment.lambda_rds,
     aws_iam_role_policy_attachment.lambda_secrets,
@@ -89,6 +107,7 @@ resource "aws_lambda_function" "polls" {
   }
 
   depends_on = [
+    null_resource.build_lambdas,
     aws_iam_role_policy_attachment.lambda_basic,
     aws_iam_role_policy_attachment.lambda_rds,
     aws_iam_role_policy_attachment.lambda_secrets,
@@ -117,6 +136,7 @@ resource "aws_lambda_function" "materials" {
   }
 
   depends_on = [
+    null_resource.build_lambdas,
     aws_iam_role_policy_attachment.lambda_basic,
     aws_iam_role_policy_attachment.lambda_rds,
     aws_iam_role_policy_attachment.lambda_secrets,
@@ -146,6 +166,7 @@ resource "aws_lambda_function" "analytics" {
   }
 
   depends_on = [
+    null_resource.build_lambdas,
     aws_iam_role_policy_attachment.lambda_basic,
     aws_iam_role_policy_attachment.lambda_rds,
     aws_iam_role_policy_attachment.lambda_secrets,
@@ -176,43 +197,43 @@ resource "aws_security_group" "lambda" {
   }
 }
 
-# Lambda Permission for API Gateway
+# Lambda permissions for API Gateway HTTP API
 resource "aws_lambda_permission" "api_events" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.events.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
+  statement_id           = "AllowExecutionFromAPIGateway"
+  action                 = "lambda:InvokeFunction"
+  function_name          = aws_lambda_function.events.function_name
+  principal              = "apigateway.amazonaws.com"
+  source_arn             = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }
 
 resource "aws_lambda_permission" "api_attendance" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.attendance.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
+  statement_id           = "AllowExecutionFromAPIGateway"
+  action                 = "lambda:InvokeFunction"
+  function_name          = aws_lambda_function.attendance.function_name
+  principal              = "apigateway.amazonaws.com"
+  source_arn             = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }
 
 resource "aws_lambda_permission" "api_polls" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.polls.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
+  statement_id           = "AllowExecutionFromAPIGateway"
+  action                 = "lambda:InvokeFunction"
+  function_name          = aws_lambda_function.polls.function_name
+  principal              = "apigateway.amazonaws.com"
+  source_arn             = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }
 
 resource "aws_lambda_permission" "api_materials" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.materials.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
+  statement_id           = "AllowExecutionFromAPIGateway"
+  action                 = "lambda:InvokeFunction"
+  function_name          = aws_lambda_function.materials.function_name
+  principal              = "apigateway.amazonaws.com"
+  source_arn             = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }
 
 resource "aws_lambda_permission" "api_analytics" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.analytics.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_api_gateway_rest_api.main.execution_arn}/*/*"
+  statement_id           = "AllowExecutionFromAPIGateway"
+  action                 = "lambda:InvokeFunction"
+  function_name          = aws_lambda_function.analytics.function_name
+  principal              = "apigateway.amazonaws.com"
+  source_arn             = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }

@@ -26,17 +26,42 @@ class AuthService {
     }
   }
 
+  /** Remove all auth-related keys from localStorage (ours + Amplify/Cognito). */
+  clearAuthStorage() {
+    if (typeof window === 'undefined') return;
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      if (
+        key === 'auth_token' ||
+        key === 'authToken' ||
+        key === 'idToken' ||
+        key === 'refresh_token' ||
+        key.startsWith('CognitoIdentityServiceProvider.')
+      ) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((k) => localStorage.removeItem(k));
+  }
+
   async logout() {
     try {
       await signOut();
-      localStorage.removeItem('auth_token');
-      return { success: true };
-    } catch (error: any) {
-      return { 
-        success: false, 
-        error: error.message || 'Logout failed' 
-      };
+    } catch (_) {}
+    if (typeof window !== 'undefined') {
+      this.clearAuthStorage();
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+      const domain = process.env.NEXT_PUBLIC_COGNITO_DOMAIN || 'payintelli-442042527593';
+      const region = process.env.NEXT_PUBLIC_COGNITO_REGION || 'ap-south-1';
+      const clientId = process.env.NEXT_PUBLIC_COGNITO_APP_CLIENT_ID || '';
+      const loginUrl = `${appUrl}/login`;
+      const logoutUri = encodeURIComponent(loginUrl);
+      const redirectUri = encodeURIComponent(loginUrl);
+      window.location.href = `https://${domain}.auth.${region}.amazoncognito.com/logout?client_id=${clientId}&logout_uri=${logoutUri}&redirect_uri=${redirectUri}`;
     }
+    return { success: true };
   }
 
   async getCurrentUser() {

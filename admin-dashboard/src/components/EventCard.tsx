@@ -30,8 +30,8 @@ export function EventCard({ event, onQRClick, onClick }: EventCardProps) {
   };
 
   return (
-    <div 
-      className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer"
+    <div
+      className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow hover:border-gray-300 transition-all cursor-pointer"
       onClick={onClick}
     >
       <div className="flex items-start justify-between mb-3">

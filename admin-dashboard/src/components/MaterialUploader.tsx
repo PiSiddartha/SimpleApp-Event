@@ -94,7 +94,7 @@ interface MaterialListItemProps {
 
 export function MaterialListItem({ material, onDownload, onDelete }: MaterialListItemProps) {
   return (
-    <div className="flex items-center justify-between p-4 bg-white border border-gray-200 rounded-lg">
+    <div className="flex items-center justify-between p-4 bg-gray-50/80 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
       <div className="flex items-center gap-3">
         <div className="p-2 bg-primary-50 rounded-lg">
           <FileText size={20} className="text-primary-600" />

@@ -1,11 +1,12 @@
 # S3 Bucket for Materials
+# Bucket name includes account ID so it is globally unique (S3 bucket names are shared across all AWS accounts)
 
 # Materials S3 Bucket
 resource "aws_s3_bucket" "materials" {
-  bucket = var.materials_bucket_name
+  bucket = "${var.materials_bucket_name}-${data.aws_caller_identity.current.account_id}"
 
   tags = {
-    Name        = var.materials_bucket_name
+    Name        = "${var.materials_bucket_name}-${data.aws_caller_identity.current.account_id}"
     Environment = var.environment
   }
 }
@@ -85,7 +86,7 @@ resource "aws_s3_bucket_policy" "materials" {
           "s3:DeleteObject"
         ]
         Resource = [
-          "arn:aws:s3:::${var.materials_bucket_name}/*"
+          "${aws_s3_bucket.materials.arn}/*"
         ]
       }
     ]

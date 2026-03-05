@@ -112,11 +112,13 @@ def get_current_user(event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
     Returns:
         User payload from token or None if not authenticated
     """
-    # Try to get from Lambda Authorizer context
+    # Try to get from Lambda Authorizer context (REST API Cognito: claims; HTTP API JWT: jwt.claims)
     if event.get("requestContext", {}).get("authorizer"):
         authorizer = event["requestContext"]["authorizer"]
         if "claims" in authorizer:
             return authorizer["claims"]
+        if "jwt" in authorizer and "claims" in authorizer["jwt"]:
+            return authorizer["jwt"]["claims"]
     
     # Try to get from headers
     headers = event.get("headers", {})
@@ -163,42 +165,65 @@ def require_auth(func):
     return wrapper
 
 
+# Cognito group name -> role name. JWT contains cognito:groups (list of group names).
+COGNITO_GROUP_TO_ROLE = {"Admins": "admin", "Organizers": "organizer"}
+
+
+def _user_roles_from_groups(user: Dict[str, Any]) -> set:
+    """Derive role set from cognito:groups (and legacy custom:role)."""
+    roles = set()
+    groups = user.get("cognito:groups") or []
+    if isinstance(groups, str):
+        groups = [groups]
+    for g in groups:
+        if g in COGNITO_GROUP_TO_ROLE:
+            roles.add(COGNITO_GROUP_TO_ROLE[g])
+    # Legacy: custom:role if no groups
+    if not roles and user.get("custom:role"):
+        roles.add(user.get("custom:role"))
+    return roles
+
+
 def require_role(*allowed_roles: str):
     """
-    Decorator to require specific roles for Lambda handler.
-    
-    Args:
-        allowed_roles: List of allowed role values
-        
+    Decorator to require Cognito group-based role for Lambda handler.
+    Uses cognito:groups from JWT: Admins -> admin, Organizers -> organizer.
+    Users in no group (e.g. Students only) have no admin/organizer role.
+
     Usage:
+        @require_role("admin")
+        def handler(event, context): ...
         @require_role("admin", "organizer")
-        def handler(event, context):
-            # ... handle request
+        def handler(event, context): ...
     """
+    allowed_set = set(allowed_roles)
+
     def decorator(func):
         @wraps(func)
         def wrapper(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             user = get_current_user(event)
-            
+
             if not user:
                 return {
                     "statusCode": 401,
                     "headers": {"Content-Type": "application/json"},
                     "body": json.dumps({"error": "Unauthorized"})
                 }
-            
-            user_role = user.get("custom:role", "attendee")
-            
-            if user_role not in allowed_roles:
+
+            user_roles = _user_roles_from_groups(user)
+            if not (user_roles & allowed_set):
                 return {
                     "statusCode": 403,
                     "headers": {"Content-Type": "application/json"},
-                    "body": json.dumps({"error": "Forbidden", "message": f"Required role: {allowed_roles}"})
+                    "body": json.dumps({
+                        "error": "Forbidden",
+                        "message": f"Required one of: {list(allowed_set)} (your groups: {user.get('cognito:groups', [])})"
+                    })
                 }
-            
+
             event["user"] = user
             return func(event, context)
-        
+
         return wrapper
     return decorator
 

@@ -1,5 +1,11 @@
 # Variables for PayIntelli Academy infrastructure
 
+variable "aws_profile" {
+  description = "AWS CLI profile name for authentication (e.g. aws --profile jm)"
+  type        = string
+  default     = "jm"
+}
+
 variable "aws_region" {
   description = "AWS region for resources"
   type        = string
@@ -56,6 +62,12 @@ variable "cognito_client_name" {
   default     = "payintelli-app"
 }
 
+variable "cognito_domain" {
+  description = "Cognito hosted UI domain (must be unique in account/region). Leave empty to use project_name-account_id."
+  type        = string
+  default     = ""
+}
+
 # S3 variables
 variable "materials_bucket_name" {
   description = "S3 bucket name for materials"
@@ -80,6 +92,12 @@ variable "python_runtime" {
   description = "Lambda Python runtime"
   type        = string
   default     = "python3.12"
+}
+
+variable "lambda_build_trigger" {
+  description = "Change this value to force Lambda packages to be rebuilt (e.g. after editing Lambda or shared code)"
+  type        = string
+  default     = "1"
 }
 
 # VPC variables (for RDS in private subnet)
@@ -107,10 +125,34 @@ variable "vpc_cidr" {
   default     = "10.0.0.0/16"
 }
 
+# Set to true to allow direct connection to RDS from the internet (e.g. TablePlus). Requires public_subnet_* to be set.
+variable "db_publicly_accessible" {
+  description = "Whether RDS is publicly accessible (for dev; use bastion in production)"
+  type        = bool
+  default     = true
+}
+
+variable "public_subnet_1_id" {
+  description = "Public subnet 1 ID (required for db_publicly_accessible; RDS must be in a subnet with IGW route)"
+  type        = string
+  default     = ""
+}
+
+variable "public_subnet_2_id" {
+  description = "Public subnet 2 ID (required for db_publicly_accessible)"
+  type        = string
+  default     = ""
+}
+
 # Database password (use secretsmanager in production)
 variable "db_password" {
-  description = "Database master password"
+  description = "Database master password. Must be 8+ chars; only printable ASCII allowed except /, @, \", and space (RDS constraint)."
   type        = string
   sensitive   = true
-  default     = ""  # Set in terraform.tfvars
+  default     = "" # Set in terraform.tfvars
+
+  validation {
+    condition     = var.db_password == "" || (length(var.db_password) >= 8 && can(regex("^[^/@\" ]+$", var.db_password)))
+    error_message = "db_password must be at least 8 characters and cannot contain /, @, \", or space (RDS requirement)."
+  }
 }

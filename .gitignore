@@ -6,10 +6,12 @@ yarn-error.log
 
 # Environment
 .env
+*.zip
 .env.local
 .env.*.local
 
 # Python
+build_lambda
 __pycache__/
 *.pyc
 

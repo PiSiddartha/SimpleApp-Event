@@ -1,9 +1,9 @@
 # RDS PostgreSQL for PayIntelli Academy
 
-# Subnet group for RDS
+# Subnet group for RDS (use public subnets when db_publicly_accessible so RDS can get a public IP)
 resource "aws_db_subnet_group" "main" {
   name       = "${var.project_name}-subnet-group"
-  subnet_ids = ["${var.private_subnet_1_id}", "${var.private_subnet_2_id}"]
+  subnet_ids = var.db_publicly_accessible && var.public_subnet_1_id != "" && var.public_subnet_2_id != "" ? [var.public_subnet_1_id, var.public_subnet_2_id] : [var.private_subnet_1_id, var.private_subnet_2_id]
 
   tags = {
     Name = "${var.project_name}-subnet-group"
@@ -24,6 +24,18 @@ resource "aws_security_group" "rds" {
     description = "PostgreSQL from VPC"
   }
 
+  # Allow public internet when db_publicly_accessible (for dev tools like TablePlus)
+  dynamic "ingress" {
+    for_each = var.db_publicly_accessible ? [1] : []
+    content {
+      from_port   = 5432
+      to_port     = 5432
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+      description = "PostgreSQL from internet (dev only)"
+    }
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -40,7 +52,7 @@ resource "aws_security_group" "rds" {
 resource "aws_db_instance" "main" {
   identifier     = "${var.project_name}-postgres"
   engine         = "postgres"
-  engine_version = "15.4"
+  engine_version = "15"
   instance_class = var.db_instance_class
 
   allocated_storage     = var.db_allocated_storage
@@ -56,7 +68,7 @@ resource "aws_db_instance" "main" {
   vpc_security_group_ids  = [aws_security_group.rds.id]
 
   multi_az               = false
-  publicly_accessible    = false
+  publicly_accessible    = var.db_publicly_accessible
   skip_final_snapshot    = true
   deletion_protection   = false
 

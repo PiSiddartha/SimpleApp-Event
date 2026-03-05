@@ -1,7 +1,9 @@
 // API service
+// Base URL must NOT include /api — API Gateway routes are /events, /polls, etc. directly.
 import axios, { AxiosInstance, AxiosError } from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://api.payintelli.com/v1';
+const rawUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ggszk3v52a.execute-api.ap-south-1.amazonaws.com';
+const API_URL = rawUrl.replace(/\/api\/?$/, '');
 
 class ApiService {
   private client: AxiosInstance;

@@ -1,5 +1,6 @@
-aws_region    = "ap-south-1"
-environment   = "dev"
+aws_profile  = "jm"
+aws_region   = "ap-south-1"
+environment  = "dev"
 project_name  = "payintelli"
 
 # Database
@@ -7,9 +8,10 @@ db_instance_class    = "db.t4g.micro"
 db_allocated_storage = 20
 db_name              = "PiResearchLabs"
 db_username          = "PiResearchAdmin"
-db_password          = "PiResearchLabs2026@"
+# RDS allows only printable ASCII except /, @, ", and space
+db_password          = "PiResearchLabs2026Secure"
 
-# Cognito
+# Cognito (optional: cognito_domain = "payintelli" if unique; else default is project_name-account_id)
 cognito_pool_name   = "payintelli-users"
 cognito_client_name = "payintelli-app"
 
@@ -26,3 +28,9 @@ vpc_id              = "vpc-02ab30d45a5f5ec3d"
 private_subnet_1_id = "subnet-01c946c4ef99f7c58"
 private_subnet_2_id = "subnet-0b147e771e6cde399"
 vpc_cidr            = "10.0.0.0/16"
+
+# RDS public access (for dev; set to false and use bastion in production)
+db_publicly_accessible = true
+# Required when db_publicly_accessible = true: use subnets that have an Internet Gateway route (VPC > Subnets)
+public_subnet_1_id     = "subnet-xxxxxxxx"
+public_subnet_2_id     = "subnet-xxxxxxxx"
