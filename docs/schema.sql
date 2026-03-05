@@ -21,9 +21,9 @@ CREATE TABLE IF NOT EXISTS users (
     CONSTRAINT users_email_unique UNIQUE (email)
 );
 
-CREATE INDEX idx_users_cognito_id ON users(cognito_id);
-CREATE INDEX idx_users_email ON users(email);
-CREATE INDEX idx_users_role ON users(role);
+CREATE INDEX IF NOT EXISTS idx_users_cognito_id ON users(cognito_id);
+CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 
 -- ============================================
 -- EVENTS TABLE
@@ -40,15 +40,12 @@ CREATE TABLE IF NOT EXISTS events (
     status VARCHAR(20) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published', 'ongoing', 'completed', 'cancelled')),
     qr_code VARCHAR(500),
     max_attendees INTEGER,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
-    CONSTRAINT events_status_check CHECK (status IN ('draft', 'published', 'ongoing', 'completed', 'cancelled')),
-    CONSTRAINT events_type_check CHECK (event_type IN ('offline', 'online', 'hybrid'))
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_events_created_by ON events(created_by);
-CREATE INDEX idx_events_status ON events(status);
-CREATE INDEX idx_events_start_time ON events(start_time);
+CREATE INDEX IF NOT EXISTS idx_events_created_by ON events(created_by);
+CREATE INDEX IF NOT EXISTS idx_events_status ON events(status);
+CREATE INDEX IF NOT EXISTS idx_events_start_time ON events(start_time);
 
 -- ============================================
 -- ATTENDANCE TABLE
@@ -64,9 +61,9 @@ CREATE TABLE IF NOT EXISTS attendance (
     CONSTRAINT attendance_event_fk FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_attendance_user_id ON attendance(user_id);
-CREATE INDEX idx_attendance_event_id ON attendance(event_id);
-CREATE INDEX idx_attendance_timestamp ON attendance(timestamp);
+CREATE INDEX IF NOT EXISTS idx_attendance_user_id ON attendance(user_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_event_id ON attendance(event_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_timestamp ON attendance(timestamp);
 
 -- ============================================
 -- POLLS TABLE
@@ -77,13 +74,11 @@ CREATE TABLE IF NOT EXISTS polls (
     question TEXT NOT NULL,
     created_by UUID REFERENCES users(id) ON DELETE SET NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'active', 'closed')),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    
-    CONSTRAINT polls_status_check CHECK (status IN ('draft', 'active', 'closed'))
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_polls_event_id ON polls(event_id);
-CREATE INDEX idx_polls_status ON polls(status);
+CREATE INDEX IF NOT EXISTS idx_polls_event_id ON polls(event_id);
+CREATE INDEX IF NOT EXISTS idx_polls_status ON polls(status);
 
 -- ============================================
 -- POLL_OPTIONS TABLE
@@ -96,7 +91,7 @@ CREATE TABLE IF NOT EXISTS poll_options (
     CONSTRAINT poll_options_poll_fk FOREIGN KEY (poll_id) REFERENCES polls(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_poll_options_poll_id ON poll_options(poll_id);
+CREATE INDEX IF NOT EXISTS idx_poll_options_poll_id ON poll_options(poll_id);
 
 -- ============================================
 -- VOTES TABLE
@@ -114,9 +109,9 @@ CREATE TABLE IF NOT EXISTS votes (
     CONSTRAINT votes_user_fk FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_votes_poll_id ON votes(poll_id);
-CREATE INDEX idx_votes_option_id ON votes(option_id);
-CREATE INDEX idx_votes_user_id ON votes(user_id);
+CREATE INDEX IF NOT EXISTS idx_votes_poll_id ON votes(poll_id);
+CREATE INDEX IF NOT EXISTS idx_votes_option_id ON votes(option_id);
+CREATE INDEX IF NOT EXISTS idx_votes_user_id ON votes(user_id);
 
 -- ============================================
 -- MATERIALS TABLE
@@ -133,8 +128,8 @@ CREATE TABLE IF NOT EXISTS materials (
     CONSTRAINT materials_event_fk FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_materials_event_id ON materials(event_id);
-CREATE INDEX idx_materials_uploaded_by ON materials(uploaded_by);
+CREATE INDEX IF NOT EXISTS idx_materials_event_id ON materials(event_id);
+CREATE INDEX IF NOT EXISTS idx_materials_uploaded_by ON materials(uploaded_by);
 
 -- ============================================
 -- SEED DATA (Optional)
