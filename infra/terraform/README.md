@@ -273,6 +273,26 @@ If you see **Cognito** `TagResource` or `DescribeUserPoolDomain` errors, the IAM
 - `cognito-idp:DescribeUserPoolDomain`
 - (or use the managed policy **AmazonCognitoPowerUser** for Cognito User Pools)
 
+## Lambda logs (AWS CLI)
+
+To inspect Lambda logs (e.g. after a failed login or API error), use CloudWatch from the CLI:
+
+```bash
+# From repo root – tail all Lambdas (last 10m), follow live
+./scripts/fetch_lambda_logs.sh
+
+# Only the users Lambda (e.g. admin create user, list users)
+./scripts/fetch_lambda_logs.sh --function users
+
+# Last hour, one-off (no follow)
+./scripts/fetch_lambda_logs.sh --since 1h --no-follow
+
+# Custom profile/region
+AWS_PROFILE=jm AWS_REGION=ap-south-1 ./scripts/fetch_lambda_logs.sh --function events
+```
+
+Log groups: `/aws/lambda/<project_name>-<events|attendance|polls|materials|analytics|users>`. Default `project_name` is `payintelli` (set `PROJECT_NAME` if you changed it in Terraform).
+
 ## Troubleshooting
 
 ### Lambda timeout errors

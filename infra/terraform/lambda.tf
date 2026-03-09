@@ -201,6 +201,35 @@ resource "aws_lambda_function" "users" {
   ]
 }
 
+# Cognito Post-Confirmation Lambda (add new sign-ups to Students group)
+resource "aws_lambda_function" "cognito_post_confirm" {
+  filename      = "../../lambdas/cognito_post_confirm.zip"
+  function_name = "${var.project_name}-cognito-post-confirm"
+  role          = aws_iam_role.lambda_exec.arn
+  runtime       = var.python_runtime
+  handler       = "cognito_post_confirm.handler.handler"
+
+  timeout     = 10
+  memory_size = 128
+
+  # userPoolId is provided in the Cognito trigger event; no env needed (avoids circular dependency with user pool)
+
+  depends_on = [
+    null_resource.build_lambdas,
+    aws_iam_role_policy_attachment.lambda_basic,
+    aws_iam_role_policy_attachment.lambda_cognito
+  ]
+}
+
+# Allow Cognito to invoke post-confirmation Lambda
+resource "aws_lambda_permission" "cognito_post_confirm" {
+  statement_id  = "AllowExecutionFromCognito"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.cognito_post_confirm.function_name
+  principal     = "cognito-idp.amazonaws.com"
+  source_arn    = aws_cognito_user_pool.main.arn
+}
+
 # Lambda Security Group
 resource "aws_security_group" "lambda" {
   name        = "${var.project_name}-lambda-sg"

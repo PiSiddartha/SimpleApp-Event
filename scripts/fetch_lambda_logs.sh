@@ -66,11 +66,12 @@ else
 fi
 
 for LOG_GROUP in "${LOG_GROUPS[@]}"; do
-  if FOLLOW; then
+  if [[ "$FOLLOW" == true ]]; then
     echo "Tailing $LOG_GROUP (since $SINCE, Ctrl+C to stop)..."
-    aws logs tail "$LOG_GROUP" --since "$SINCE" --follow --format short --region "$AWS_REGION" --profile "$AWS_PROFILE" 2>/dev/null || true
+    aws logs tail "$LOG_GROUP" --since "$SINCE" --follow --format short --region "$AWS_REGION" --profile "$AWS_PROFILE" 2>/dev/null &
   else
     echo "Fetching $LOG_GROUP (since $SINCE)..."
     aws logs tail "$LOG_GROUP" --since "$SINCE" --format short --region "$AWS_REGION" --profile "$AWS_PROFILE" 2>/dev/null || true
   fi
 done
+[[ "$FOLLOW" == true ]] && wait

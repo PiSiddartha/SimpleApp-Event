@@ -29,10 +29,10 @@ resource "aws_cognito_user_pool" "main" {
     email_sending_account = "COGNITO_DEFAULT"
   }
 
-  # Lambda triggers (optional - for custom workflows)
-  # lambda_config {
-  #   pre_sign_up = aws_lambda_function.pre_sign_up.arn
-  # }
+  # Post-confirmation: add new sign-ups to Students group (run scripts/create_cognito_groups.sh once so group exists)
+  lambda_config {
+    post_confirmation = aws_lambda_function.cognito_post_confirm.arn
+  }
 
   # Admin create user (disabled for security)
   admin_create_user_config {

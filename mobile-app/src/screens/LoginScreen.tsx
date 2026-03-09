@@ -16,9 +16,10 @@ import { colors, spacing, borderRadius } from '@/theme/colors';
 
 interface LoginScreenProps {
   onLoginSuccess: () => void;
+  onCreateAccount?: () => void;
 }
 
-export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
+export function LoginScreen({ onLoginSuccess, onCreateAccount }: LoginScreenProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -106,6 +107,12 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
                 <Text style={styles.buttonText}>Sign In</Text>
               )}
             </TouchableOpacity>
+
+            {onCreateAccount ? (
+              <TouchableOpacity style={styles.linkButton} onPress={onCreateAccount} disabled={loading}>
+                <Text style={styles.linkText}>Don't have an account? Create account</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
 
           <Text style={styles.footer}>
@@ -193,6 +200,16 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontSize: 16,
     fontWeight: '600',
+  },
+  linkButton: {
+    alignItems: 'center',
+    marginTop: spacing.lg,
+    padding: spacing.sm,
+  },
+  linkText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '500',
   },
   footer: {
     textAlign: 'center',

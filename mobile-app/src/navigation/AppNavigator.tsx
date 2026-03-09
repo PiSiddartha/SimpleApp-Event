@@ -6,6 +6,9 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View, StyleSheet, TouchableOpacity } from 'react-native';
 
 import { LoginScreen } from '@/screens/LoginScreen';
+import { AuthHomeScreen } from '@/screens/AuthHomeScreen';
+import { SignUpScreen } from '@/screens/SignUpScreen';
+import { ConfirmSignUpScreen } from '@/screens/ConfirmSignUpScreen';
 import { HomeScreen } from '@/screens/HomeScreen';
 import { EventScreen } from '@/screens/EventScreen';
 import { PollScreen } from '@/screens/PollScreen';
@@ -235,12 +238,42 @@ export function AppNavigator() {
   );
 }
 
-// Auth Stack
+// Auth Stack: AuthHome (entry) → Sign In → Login | Create account → SignUp → ConfirmSignUp → Login
 function AuthStack({ onLoginSuccess }: { onLoginSuccess: () => void }) {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }}>
+    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="AuthHome">
+      <Stack.Screen name="AuthHome">
+        {({ navigation }) => (
+          <AuthHomeScreen
+            onSignIn={() => navigation.navigate('Login')}
+            onCreateAccount={() => navigation.navigate('SignUp')}
+          />
+        )}
+      </Stack.Screen>
       <Stack.Screen name="Login">
-        {() => <LoginScreen onLoginSuccess={onLoginSuccess} />}
+        {({ navigation }) => (
+          <LoginScreen
+            onLoginSuccess={onLoginSuccess}
+            onCreateAccount={() => navigation.navigate('SignUp')}
+          />
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="SignUp">
+        {({ navigation }) => (
+          <SignUpScreen
+            onSuccess={(email) => navigation.navigate('ConfirmSignUp', { email })}
+            onSignIn={() => navigation.navigate('Login')}
+          />
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="ConfirmSignUp">
+        {({ route, navigation }) => (
+          <ConfirmSignUpScreen
+            email={route.params?.email ?? ''}
+            onSuccess={() => navigation.navigate('Login')}
+            onResend={() => {}}
+          />
+        )}
       </Stack.Screen>
     </Stack.Navigator>
   );

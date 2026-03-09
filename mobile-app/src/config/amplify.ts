@@ -20,6 +20,9 @@ const awsConfig = {
 
 try {
   Amplify.configure(awsConfig);
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    console.log('[Amplify] configured for region:', region, 'userPoolId:', userPoolId ? `${userPoolId.slice(0, 12)}...` : 'missing', 'clientId:', userPoolClientId ? `${userPoolClientId.slice(0, 8)}...` : 'missing');
+  }
 } catch (e) {
   console.warn('Amplify configure:', e);
 }

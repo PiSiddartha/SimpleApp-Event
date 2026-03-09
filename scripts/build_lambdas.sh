@@ -9,7 +9,7 @@ LAMBDAS_DIR="$REPO_ROOT/lambdas"
 SHARED_DIR="$REPO_ROOT/shared"
 REQUIREMENTS="$REPO_ROOT/requirements.txt"
 BUILD_DIR="$REPO_ROOT/build_lambda"
-LAMBDA_NAMES=(events attendance polls materials analytics users)
+LAMBDA_NAMES=(events attendance polls materials analytics users cognito_post_confirm)
 
 cd "$REPO_ROOT"
 
