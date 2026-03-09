@@ -23,32 +23,21 @@ export function LeaderboardScreen({ eventId, onBack }: LeaderboardScreenProps) {
   const topStudents = analytics?.top_students || [];
 
   const renderStudent = ({ item, index }: { item: any; index: number }) => {
-    const getRankEmoji = (rank: number) => {
-      switch (rank) {
-        case 1: return '🥇';
-        case 2: return '🥈';
-        case 3: return '🥉';
-        default: return `${rank}`;
-      }
-    };
-
-    const getRankStyle = (rank: number) => {
-      switch (rank) {
-        case 1: return { backgroundColor: '#fef3c7', color: '#d97706' };
+    const rank = index + 1;
+    const getRankStyle = (r: number) => {
+      switch (r) {
+        case 1: return { backgroundColor: '#fef3c7', color: '#b45309' };
         case 2: return { backgroundColor: '#f3f4f6', color: '#6b7280' };
-        case 3: return { backgroundColor: '#fef3c7', color: '#b45309' };
+        case 3: return { backgroundColor: '#e0e7ff', color: '#4338ca' };
         default: return { backgroundColor: '#f9fafb', color: '#6b7280' };
       }
     };
-
-    const rankStyle = getRankStyle(index + 1);
+    const rankStyle = getRankStyle(rank);
 
     return (
       <View style={styles.studentRow}>
         <View style={[styles.rankBadge, { backgroundColor: rankStyle.backgroundColor }]}>
-          <Text style={[styles.rankText, { color: rankStyle.color }]}>
-            {getRankEmoji(index + 1)}
-          </Text>
+          <Text style={[styles.rankText, { color: rankStyle.color }]}>{rank}</Text>
         </View>
         
         <View style={styles.studentInfo}>
@@ -77,7 +66,7 @@ export function LeaderboardScreen({ eventId, onBack }: LeaderboardScreenProps) {
           <Text style={styles.backText}>← Back</Text>
         </TouchableOpacity>
         
-        <Text style={styles.title}>🏆 Leaderboard</Text>
+        <Text style={styles.title}>Leaderboard</Text>
         <Text style={styles.subtitle}>
           Top engaged students
         </Text>
@@ -119,7 +108,6 @@ export function LeaderboardScreen({ eventId, onBack }: LeaderboardScreenProps) {
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>📊</Text>
               <Text style={styles.emptyText}>No rankings yet</Text>
               <Text style={styles.emptySubtext}>
                 Engagement data will appear after students start participating
@@ -268,10 +256,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 40,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: spacing.md,
   },
   emptyText: {
     fontSize: 18,

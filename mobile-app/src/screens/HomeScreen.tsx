@@ -34,7 +34,7 @@ export function HomeScreen({ onEventPress, onScanPress, onLogout }: HomeScreenPr
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <View>
-          <Text style={styles.greeting}>Welcome back! 👋</Text>
+          <Text style={styles.greeting}>Welcome back</Text>
           <Text style={styles.title}>Upcoming Events</Text>
         </View>
         {onLogout ? (
@@ -49,7 +49,6 @@ export function HomeScreen({ onEventPress, onScanPress, onLogout }: HomeScreenPr
         onPress={onScanPress}
         activeOpacity={0.8}
       >
-        <Text style={styles.scanIcon}>📷</Text>
         <Text style={styles.scanText}>Scan QR Code</Text>
       </TouchableOpacity>
 
@@ -71,7 +70,6 @@ export function HomeScreen({ onEventPress, onScanPress, onLogout }: HomeScreenPr
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyIcon}>📅</Text>
               <Text style={styles.emptyText}>No upcoming events</Text>
               <Text style={styles.emptySubtext}>
                 Scan a QR code to join an event
@@ -116,7 +114,6 @@ const styles = StyleSheet.create({
     color: colors.text,
   },
   scanButton: {
-    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.primary,
@@ -124,10 +121,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     padding: spacing.lg,
     borderRadius: 12,
-    gap: 10,
-  },
-  scanIcon: {
-    fontSize: 22,
   },
   scanText: {
     color: colors.white,
@@ -162,10 +155,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingTop: 40,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: spacing.md,
   },
   emptyText: {
     fontSize: 18,

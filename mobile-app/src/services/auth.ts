@@ -63,9 +63,27 @@ class AuthService {
       const msg = error instanceof Error ? (error as Error & { name?: string; code?: string }).message ?? '' : '';
       const name = error instanceof Error ? (error as Error & { name?: string }).name ?? '' : '';
       const code = error instanceof Error ? (error as Error & { code?: string }).code ?? '' : '';
+      const underlyingMsg = typeof err?.underlyingError === 'object' && err?.underlyingError !== null && 'message' in err.underlyingError
+        ? String((err.underlyingError as { message?: unknown }).message ?? '') : '';
 
       let message = 'Login failed. Please try again.';
-      if (name === 'UserNotFoundException' || code === 'UserNotFoundException' || /user.*not.*found|incorrect.*username/i.test(msg)) {
+      if (/already a signed in user|already signed in/i.test(msg) || /already a signed in user|already signed in/i.test(underlyingMsg)) {
+        try {
+          const session = await fetchAuthSession();
+          const idToken = session.tokens?.idToken?.toString();
+          if (idToken) {
+            await SecureStore.setItemAsync(ID_TOKEN_KEY, idToken);
+            await SecureStore.setItemAsync(TOKEN_KEY, idToken);
+            const user = await getCurrentUser();
+            const userData = { id: user?.userId ?? '', email: user?.signInDetails?.loginId ?? email };
+            await SecureStore.setItemAsync(USER_KEY, JSON.stringify(userData));
+            return { success: true, user: userData };
+          }
+        } catch (_) {}
+        message = 'You are already signed in. Please close and reopen the app, or sign out first.';
+      } else if (/expo go|doesn't seem to be linked|not using Expo Go/i.test(underlyingMsg) || /expo go|doesn't seem to be linked|not using Expo Go/i.test(msg)) {
+        message = 'Sign-in does not work in Expo Go. Use a development build instead: run "npx expo run:ios" (or "npx expo run:android") from the mobile-app folder, then open the app from the simulator or device.';
+      } else if (name === 'UserNotFoundException' || code === 'UserNotFoundException' || /user.*not.*found|incorrect.*username/i.test(msg)) {
         message = 'No account found with this email. Please sign up or check the email address.';
       } else if (name === 'NotAuthorizedException' || code === 'NotAuthorizedException' || /not authorized|incorrect.*password/i.test(msg)) {
         message = 'Incorrect password. Please try again.';
@@ -182,6 +200,11 @@ class AuthService {
 
   async clearStorage() {
     try {
+      await signOut();
+    } catch (_) {
+      // ignore — may already be signed out
+    }
+    try {
       await SecureStore.deleteItemAsync(TOKEN_KEY);
       await SecureStore.deleteItemAsync(ID_TOKEN_KEY);
       await SecureStore.deleteItemAsync(USER_KEY);
@@ -227,6 +250,23 @@ class AuthService {
       return await SecureStore.getItemAsync(TOKEN_KEY);
     } catch {
       return null;
+    }
+  }
+
+  /** Refresh Cognito session and persist new tokens. Returns true if a valid session was restored. */
+  async refreshSession(): Promise<boolean> {
+    try {
+      const session = await fetchAuthSession();
+      const idToken = session.tokens?.idToken?.toString();
+      if (!idToken) return false;
+      await SecureStore.setItemAsync(ID_TOKEN_KEY, idToken);
+      await SecureStore.setItemAsync(TOKEN_KEY, idToken);
+      const user = await getCurrentUser();
+      const userData = { id: user?.userId ?? '', email: user?.signInDetails?.loginId ?? '' };
+      await SecureStore.setItemAsync(USER_KEY, JSON.stringify(userData));
+      return true;
+    } catch {
+      return false;
     }
   }
 }

@@ -2,6 +2,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView } from 'react-native';
 import { colors, spacing, borderRadius } from '@/theme/colors';
+import { PiLogo } from '@/components/PiLogo';
 
 interface AuthHomeScreenProps {
   onSignIn: () => void;
@@ -13,8 +14,8 @@ export function AuthHomeScreen({ onSignIn, onCreateAccount }: AuthHomeScreenProp
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
         <View style={styles.header}>
-          <Text style={styles.logo}>🎓</Text>
-          <Text style={styles.title}>PiResearch Labs</Text>
+            <PiLogo size={72} />
+            <Text style={styles.title}>PiResearch Labs</Text>
           <Text style={styles.subtitle}>Student</Text>
         </View>
 
@@ -48,7 +49,6 @@ const styles = StyleSheet.create({
     marginBottom: 48,
   },
   logo: {
-    fontSize: 56,
     marginBottom: spacing.md,
   },
   title: {

@@ -63,8 +63,8 @@ export function QRScannerScreen({ onScanSuccess, onBack }: QRScannerScreenProps)
       await api.joinEvent(eventId);
       
       Alert.alert(
-        'Success! 🎉',
-        'You have joined the event!',
+        'Success',
+        'You have joined the event.',
         [{ text: 'OK', onPress: () => onScanSuccess(eventId) }]
       );
       
@@ -104,9 +104,8 @@ export function QRScannerScreen({ onScanSuccess, onBack }: QRScannerScreenProps)
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centerContent}>
-          <Text style={styles.icon}>📷</Text>
           <Text style={styles.message}>
-            We need camera permission to scan QR codes
+            Camera access is required to scan QR codes.
           </Text>
           <TouchableOpacity 
             style={styles.permissionButton}
@@ -133,7 +132,7 @@ export function QRScannerScreen({ onScanSuccess, onBack }: QRScannerScreenProps)
           <Text style={styles.backText}>← Cancel</Text>
         </TouchableOpacity>
         
-        <Text style={styles.title}>📷 Scan QR Code</Text>
+        <Text style={styles.title}>Scan QR Code</Text>
         <Text style={styles.subtitle}>
           Point your camera at the event QR code
         </Text>
@@ -147,17 +146,15 @@ export function QRScannerScreen({ onScanSuccess, onBack }: QRScannerScreenProps)
             barcodeTypes: ["qr"],
           }}
           onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-        >
-          <View style={styles.overlay}>
-            <View style={styles.scanArea}>
-              <View style={[styles.corner, styles.topLeft]} />
-              <View style={[styles.corner, styles.topRight]} />
-              <View style={[styles.corner, styles.bottomLeft]} />
-              <View style={[styles.corner, styles.bottomRight]} />
-            </View>
+        />
+        <View style={styles.overlay} pointerEvents="none">
+          <View style={styles.scanArea}>
+            <View style={[styles.corner, styles.topLeft]} />
+            <View style={[styles.corner, styles.topRight]} />
+            <View style={[styles.corner, styles.bottomLeft]} />
+            <View style={[styles.corner, styles.bottomRight]} />
           </View>
-        </CameraView>
-        
+        </View>
         {scanned && (
           <TouchableOpacity 
             style={styles.rescanButton}
@@ -211,10 +208,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.textMuted,
   },
-  icon: {
-    fontSize: 64,
-    marginBottom: spacing.lg,
-  },
   message: {
     fontSize: 16,
     color: colors.white,
@@ -245,10 +238,10 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   camera: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
   },
   overlay: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',

@@ -13,6 +13,7 @@ import {
   Alert 
 } from 'react-native';
 import { colors, spacing, borderRadius } from '@/theme/colors';
+import { PiLogo } from '@/components/PiLogo';
 
 interface LoginScreenProps {
   onLoginSuccess: () => void;
@@ -58,7 +59,7 @@ export function LoginScreen({ onLoginSuccess, onCreateAccount }: LoginScreenProp
       >
         <View style={styles.content}>
           <View style={styles.header}>
-            <Text style={styles.logo}>🎓</Text>
+            <PiLogo size={72} />
             <Text style={styles.title}>PiResearch Labs</Text>
             <Text style={styles.subtitle}>Student Login</Text>
           </View>
@@ -142,7 +143,6 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   logo: {
-    fontSize: 56,
     marginBottom: spacing.md,
   },
   title: {

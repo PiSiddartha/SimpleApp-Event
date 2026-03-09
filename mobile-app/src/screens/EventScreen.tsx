@@ -28,7 +28,7 @@ interface EventScreenProps {
 }
 
 export function EventScreen({ eventId, onBack, onPollPress }: EventScreenProps) {
-  const { data: event, isLoading: eventLoading } = useEvent(eventId);
+  const { data: event, isLoading: eventLoading, error: eventError } = useEvent(eventId);
   const { data: pollsData, isLoading: pollsLoading } = usePolls(eventId);
   const { data: materialsData, isLoading: materialsLoading } = useMaterials(eventId);
   const joinEvent = useJoinEvent();
@@ -102,11 +102,20 @@ export function EventScreen({ eventId, onBack, onPollPress }: EventScreenProps) 
     );
   }
 
-  if (!event) {
+  if (!event && (eventError || !eventLoading)) {
+    const isUnauthorized = (eventError as any)?.response?.status === 401;
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>Event not found</Text>
+          <TouchableOpacity onPress={onBack} style={styles.backButton}>
+            <Text style={styles.backText}>Back</Text>
+          </TouchableOpacity>
+          <Text style={styles.errorText}>
+            {isUnauthorized ? 'You don’t have access to this event.' : 'Event not found.'}
+          </Text>
+          <TouchableOpacity onPress={onBack} style={styles.errorBackButton}>
+            <Text style={styles.errorBackText}>Back to events</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -142,19 +151,17 @@ export function EventScreen({ eventId, onBack, onPollPress }: EventScreenProps) 
         {/* Event Info */}
         <View style={styles.section}>
           <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>📅</Text>
+            <Text style={styles.infoLabel}>Date</Text>
             <Text style={styles.infoText}>{formatDate(event.start_time)}</Text>
           </View>
-          
-          {event.location && (
+          {event.location ? (
             <View style={styles.infoRow}>
-              <Text style={styles.infoIcon}>📍</Text>
+              <Text style={styles.infoLabel}>Location</Text>
               <Text style={styles.infoText}>{event.location}</Text>
             </View>
-          )}
-          
+          ) : null}
           <View style={styles.infoRow}>
-            <Text style={styles.infoIcon}>🏷️</Text>
+            <Text style={styles.infoLabel}>Type</Text>
             <Text style={styles.infoText}>{event.event_type ?? '—'}</Text>
           </View>
         </View>
@@ -169,20 +176,20 @@ export function EventScreen({ eventId, onBack, onPollPress }: EventScreenProps) 
             {joinEvent.isPending ? (
               <ActivityIndicator color={colors.white} />
             ) : (
-              <Text style={styles.joinButtonText}>✅ Join Event</Text>
+              <Text style={styles.joinButtonText}>Join Event</Text>
             )}
           </TouchableOpacity>
         )}
 
         {joined && (
           <View style={styles.joinedBanner}>
-            <Text style={styles.joinedText}>✓ You're attending this event</Text>
+            <Text style={styles.joinedText}>You're attending this event</Text>
           </View>
         )}
 
         {/* Polls Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📊 Polls</Text>
+          <Text style={styles.sectionTitle}>Polls</Text>
           
           {pollsLoading ? (
             <ActivityIndicator color={colors.primary} />
@@ -201,7 +208,7 @@ export function EventScreen({ eventId, onBack, onPollPress }: EventScreenProps) 
 
         {/* Materials Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>📚 Materials</Text>
+          <Text style={styles.sectionTitle}>Materials</Text>
           
           {materialsLoading ? (
             <ActivityIndicator color={colors.primary} />
@@ -220,13 +227,11 @@ export function EventScreen({ eventId, onBack, onPollPress }: EventScreenProps) 
 
         {/* Leaderboard Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>🏆 Leaderboard</Text>
+          <Text style={styles.sectionTitle}>Leaderboard</Text>
           {topStudents.length > 0 ? (
             topStudents.slice(0, 10).map((student: { user_id?: string; score?: number; total_actions?: number }, index: number) => (
               <View key={student?.user_id ?? `leader-${index}`} style={styles.leaderboardRow}>
-                <Text style={styles.leaderboardRank}>
-                  {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}`}
-                </Text>
+                <Text style={styles.leaderboardRank}>{index + 1}</Text>
                 <View style={styles.leaderboardInfo}>
                   <Text style={styles.leaderboardId} numberOfLines={1}>
                     {student?.user_id
@@ -261,10 +266,22 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: spacing.xl,
   },
   errorText: {
-    color: colors.error,
+    color: colors.text,
     fontSize: 16,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+  errorBackButton: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+  },
+  errorBackText: {
+    fontSize: 16,
+    color: colors.primary,
+    fontWeight: '600',
   },
   header: {
     padding: spacing.xl,
@@ -296,11 +313,14 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
     marginBottom: 10,
   },
-  infoIcon: {
-    fontSize: 18,
+  infoLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textMuted,
+    minWidth: 72,
   },
   infoText: {
     fontSize: 15,

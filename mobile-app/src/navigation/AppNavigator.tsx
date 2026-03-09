@@ -27,15 +27,16 @@ function MainTabs({ onLogout }: { onLogout: (() => void) | null }) {
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
+        tabBarShowIcon: false,
         tabBarStyle: {
-          height: 85,
-          paddingBottom: 25,
-          paddingTop: 10,
+          height: 56,
+          paddingBottom: 8,
+          paddingTop: 8,
           backgroundColor: colors.backgroundCard,
           borderTopColor: colors.border,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 13,
           fontWeight: '600',
         },
         headerShown: false,
@@ -43,12 +44,7 @@ function MainTabs({ onLogout }: { onLogout: (() => void) | null }) {
     >
       <Tab.Screen
         name="Home"
-        options={{
-          tabBarLabel: 'Events',
-          tabBarIcon: ({ color, size }) => (
-            <Text style={{ fontSize: 22 }}>🏠</Text>
-          ),
-        }}
+        options={{ tabBarLabel: 'Events' }}
       >
         {() => (
           <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -98,12 +94,7 @@ function MainTabs({ onLogout }: { onLogout: (() => void) | null }) {
       
       <Tab.Screen
         name="Leaderboard"
-        options={{
-          tabBarLabel: 'Leaderboard',
-          tabBarIcon: ({ color, size }) => (
-            <Text style={{ fontSize: 22 }}>🏆</Text>
-          ),
-        }}
+        options={{ tabBarLabel: 'Leaderboard' }}
       >
         {() => (
           <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -111,7 +102,6 @@ function MainTabs({ onLogout }: { onLogout: (() => void) | null }) {
               {({ navigation }: any) => (
                 <PlaceholderScreen 
                   title="Leaderboard"
-                  icon="🏆"
                   description="Join an event to see the leaderboard"
                   onAction={() => navigation.navigate('Home')}
                 />
@@ -127,18 +117,15 @@ function MainTabs({ onLogout }: { onLogout: (() => void) | null }) {
 // Placeholder screen component
 function PlaceholderScreen({
   title,
-  icon,
   description,
   onAction,
 }: {
   title: string;
-  icon: string;
   description: string;
   onAction?: () => void;
 }) {
   return (
     <View style={placeholderStyles.placeholder}>
-      <Text style={placeholderStyles.placeholderIcon}>{icon}</Text>
       <Text style={placeholderStyles.placeholderTitle}>{title}</Text>
       <Text style={placeholderStyles.placeholderDesc}>{description}</Text>
       {onAction ? (
@@ -158,12 +145,8 @@ const placeholderStyles = StyleSheet.create({
     backgroundColor: colors.background,
     padding: spacing.xxl,
   },
-  placeholderIcon: {
-    fontSize: 56,
-    marginBottom: spacing.lg,
-  },
   placeholderTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '700',
     color: colors.text,
     marginBottom: spacing.sm,

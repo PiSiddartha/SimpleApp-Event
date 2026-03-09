@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { colors, spacing, borderRadius } from '@/theme/colors';
+import { PiLogo } from '@/components/PiLogo';
 
 interface ConfirmSignUpScreenProps {
   email: string;
@@ -77,7 +78,7 @@ export function ConfirmSignUpScreen({ email, onSuccess, onResend }: ConfirmSignU
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardView}>
         <View style={styles.content}>
           <View style={styles.header}>
-            <Text style={styles.logo}>📧</Text>
+            <PiLogo size={56} />
             <Text style={styles.title}>Verify your email</Text>
             <Text style={styles.subtitle}>We sent a 6-digit code to {email}</Text>
           </View>
@@ -138,7 +139,7 @@ const styles = StyleSheet.create({
   keyboardView: { flex: 1 },
   content: { flex: 1, padding: spacing.xxl, justifyContent: 'center' },
   header: { alignItems: 'center', marginBottom: 32 },
-  logo: { fontSize: 48, marginBottom: spacing.sm },
+  logo: { marginBottom: spacing.sm },
   title: { fontSize: 24, fontWeight: '700', color: colors.primary, marginBottom: spacing.xs },
   subtitle: { fontSize: 14, color: colors.textSecondary, textAlign: 'center' },
   successBox: { backgroundColor: colors.successBg, padding: spacing.md, borderRadius: borderRadius.md, marginBottom: spacing.lg },

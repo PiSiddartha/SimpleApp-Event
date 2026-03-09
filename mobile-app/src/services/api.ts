@@ -24,12 +24,23 @@ class ApiService {
       return config;
     });
 
-    // Handle auth errors: clear storage and notify so navigator shows login
+    // On 401: try to refresh the Cognito session and retry once. Only clear auth and show login
+    // when refresh failed or we had no session — not when the retry still returns 401 (e.g. backend
+    // rejects the token for that resource). That prevents the "open event → login → open event → login" loop.
     this.client.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
         const status = error.response?.status;
-        if (status === 401) {
+        const config = error.config as (typeof error.config) & { _retried?: boolean };
+        if (status === 401 && config && !config._retried) {
+          const refreshed = await authService.refreshSession();
+          if (refreshed) {
+            config._retried = true;
+            return this.client.request(config);
+          }
+        }
+        // Only clear storage when we didn't just retry with a fresh token (session is invalid or refresh failed)
+        if (status === 401 && !config?._retried) {
           await authService.clearStorage();
         }
         if (status === 403) {

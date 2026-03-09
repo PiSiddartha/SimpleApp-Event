@@ -1,4 +1,4 @@
-// Sign Up: email, password, optional name → Cognito signUp → confirm code screen
+// Sign Up: email, password, required name → Cognito signUp → confirm code screen
 import React, { useState } from 'react';
 import {
   View,
@@ -13,6 +13,7 @@ import {
   ScrollView,
 } from 'react-native';
 import { colors, spacing, borderRadius } from '@/theme/colors';
+import { PiLogo } from '@/components/PiLogo';
 
 const PASSWORD_HINT = '8+ characters, upper & lower case, number, symbol';
 
@@ -41,6 +42,8 @@ export function SignUpScreen({ onSuccess, onSignIn }: SignUpScreenProps) {
 
   const handleSignUp = async () => {
     const trimmedEmail = email.trim().toLowerCase();
+    const trimmedGiven = givenName.trim();
+    const trimmedFamily = familyName.trim();
     if (!trimmedEmail) {
       setError('Please enter your email');
       return;
@@ -57,6 +60,14 @@ export function SignUpScreen({ onSuccess, onSignIn }: SignUpScreenProps) {
       setError('Passwords do not match');
       return;
     }
+    if (!trimmedGiven) {
+      setError('Please enter your first name');
+      return;
+    }
+    if (!trimmedFamily) {
+      setError('Please enter your last name');
+      return;
+    }
 
     setLoading(true);
     setError('');
@@ -64,8 +75,8 @@ export function SignUpScreen({ onSuccess, onSignIn }: SignUpScreenProps) {
     try {
       const { authService } = await import('@/services/auth');
       const result = await authService.signUp(trimmedEmail, password, {
-        givenName: givenName.trim() || undefined,
-        familyName: familyName.trim() || undefined,
+        givenName: trimmedGiven,
+        familyName: trimmedFamily,
       });
 
       if (result.success) {
@@ -85,7 +96,7 @@ export function SignUpScreen({ onSuccess, onSignIn }: SignUpScreenProps) {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardView}>
         <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
           <View style={styles.header}>
-            <Text style={styles.logo}>🎓</Text>
+            <PiLogo size={56} />
             <Text style={styles.title}>Create account</Text>
             <Text style={styles.subtitle}>PiResearch Labs – Student</Text>
           </View>
@@ -136,7 +147,7 @@ export function SignUpScreen({ onSuccess, onSignIn }: SignUpScreenProps) {
               />
             </View>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>First name (optional)</Text>
+              <Text style={styles.label}>First name</Text>
               <TextInput
                 style={styles.input}
                 value={givenName}
@@ -147,7 +158,7 @@ export function SignUpScreen({ onSuccess, onSignIn }: SignUpScreenProps) {
               />
             </View>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Last name (optional)</Text>
+              <Text style={styles.label}>Last name</Text>
               <TextInput
                 style={styles.input}
                 value={familyName}
@@ -183,7 +194,7 @@ const styles = StyleSheet.create({
   keyboardView: { flex: 1 },
   scrollContent: { flexGrow: 1, padding: spacing.xxl, paddingBottom: 40 },
   header: { alignItems: 'center', marginBottom: 24 },
-  logo: { fontSize: 48, marginBottom: spacing.sm },
+  logo: { marginBottom: spacing.sm },
   title: { fontSize: 24, fontWeight: '700', color: colors.primary, marginBottom: spacing.xs },
   subtitle: { fontSize: 14, color: colors.textSecondary },
   errorBox: { backgroundColor: colors.errorBg, padding: spacing.md, borderRadius: borderRadius.md, marginBottom: spacing.lg },

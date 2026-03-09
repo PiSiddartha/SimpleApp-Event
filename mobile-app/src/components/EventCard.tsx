@@ -56,16 +56,15 @@ export function EventCard({ event, onPress }: EventCardProps) {
       
       <View style={styles.footer}>
         <View style={styles.infoItem}>
-          <Text style={styles.infoLabel}>📅</Text>
+          <Text style={styles.infoLabel}>Date</Text>
           <Text style={styles.infoText}>{formatDate(event.start_time)}</Text>
         </View>
-        
-        {event.location && (
+        {event.location ? (
           <View style={styles.infoItem}>
-            <Text style={styles.infoLabel}>📍</Text>
+            <Text style={styles.infoLabel}>Location</Text>
             <Text style={styles.infoText} numberOfLines={1}>{event.location}</Text>
           </View>
-        )}
+        ) : null}
       </View>
     </TouchableOpacity>
   );
@@ -123,7 +122,11 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   infoLabel: {
-    fontSize: 12,
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.textMuted,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   infoText: {
     fontSize: 13,
