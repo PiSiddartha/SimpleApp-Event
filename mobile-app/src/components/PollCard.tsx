@@ -1,6 +1,7 @@
 // Poll Card Component
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Poll, PollOption } from '@/types/poll';
 import { colors, spacing, borderRadius } from '@/theme/colors';
 
@@ -27,21 +28,24 @@ export function PollCard({ poll, onVote }: PollCardProps) {
         {(poll?.options ?? []).map((option: PollOption) => (
           <TouchableOpacity
             key={option.id}
-            style={styles.optionButton}
+            style={[styles.optionButton, !isActive && styles.optionButtonDisabled]}
             onPress={() => onVote(poll)}
             disabled={!isActive}
+            activeOpacity={0.7}
           >
             <Text style={styles.optionText}>{option.option_text}</Text>
           </TouchableOpacity>
         ))}
       </View>
-      
+
       {isActive && (
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.voteButton}
           onPress={() => onVote(poll)}
+          activeOpacity={0.85}
         >
-          <Text style={styles.voteButtonText}>Vote</Text>
+          <Ionicons name="checkmark-done-outline" size={20} color={colors.white} />
+          <Text style={styles.voteButtonText}>Submit vote</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -87,26 +91,34 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   optionButton: {
-    padding: 14,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: colors.border,
     backgroundColor: colors.background,
   },
+  optionButtonDisabled: {
+    opacity: 0.6,
+  },
   optionText: {
     fontSize: 15,
-    color: '#374151',
+    color: colors.text,
     textAlign: 'center',
   },
   voteButton: {
-    marginTop: spacing.lg,
-    padding: 14,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.primary,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 12,
+    backgroundColor: colors.primary,
   },
   voteButtonText: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '600',
     color: colors.white,
   },

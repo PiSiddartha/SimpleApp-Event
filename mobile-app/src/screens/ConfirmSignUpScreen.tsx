@@ -127,7 +127,7 @@ export function ConfirmSignUpScreen({ email, onSuccess, onResend }: ConfirmSignU
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.footer}>Powered by PiResearch Labs</Text>
+          <Text style={styles.footer}>Powered by PiLearn</Text>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

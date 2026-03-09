@@ -4,6 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text, View, StyleSheet, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { LoginScreen } from '@/screens/LoginScreen';
 import { AuthHomeScreen } from '@/screens/AuthHomeScreen';
@@ -15,6 +16,7 @@ import { PollScreen } from '@/screens/PollScreen';
 import { MaterialsScreen } from '@/screens/MaterialsScreen';
 import { LeaderboardScreen } from '@/screens/LeaderboardScreen';
 import { QRScannerScreen } from '@/screens/QRScannerScreen';
+import { ProfileScreen } from '@/screens/ProfileScreen';
 import { colors, spacing } from '@/theme/colors';
 
 const Stack = createNativeStackNavigator();
@@ -27,7 +29,7 @@ function MainTabs({ onLogout }: { onLogout: (() => void) | null }) {
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
-        tabBarShowIcon: false,
+        tabBarShowIcon: true,
         tabBarStyle: {
           height: 56,
           paddingBottom: 8,
@@ -44,7 +46,12 @@ function MainTabs({ onLogout }: { onLogout: (() => void) | null }) {
     >
       <Tab.Screen
         name="Home"
-        options={{ tabBarLabel: 'Events' }}
+        options={{
+          tabBarLabel: 'Events',
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name={focused ? 'calendar' : 'calendar-outline'} size={size ?? 24} color={color} />
+          ),
+        }}
       >
         {() => (
           <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -57,7 +64,15 @@ function MainTabs({ onLogout }: { onLogout: (() => void) | null }) {
                   onScanPress={() =>
                     navigation.navigate('QRScanner')
                   }
-                  onLogout={onLogout ? () => onLogout() : undefined}
+                  onProfilePress={() => navigation.navigate('Profile')}
+                />
+              )}
+            </Stack.Screen>
+            <Stack.Screen name="Profile">
+              {({ navigation }: any) => (
+                <ProfileScreen
+                  onBack={() => navigation.goBack()}
+                  onLogout={onLogout ? () => onLogout() : () => {}}
                 />
               )}
             </Stack.Screen>
@@ -94,7 +109,12 @@ function MainTabs({ onLogout }: { onLogout: (() => void) | null }) {
       
       <Tab.Screen
         name="Leaderboard"
-        options={{ tabBarLabel: 'Leaderboard' }}
+        options={{
+          tabBarLabel: 'Leaderboard',
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name={focused ? 'podium' : 'podium-outline'} size={size ?? 24} color={color} />
+          ),
+        }}
       >
         {() => (
           <Stack.Navigator screenOptions={{ headerShown: false }}>

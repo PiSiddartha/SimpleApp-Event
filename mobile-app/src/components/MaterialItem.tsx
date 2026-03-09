@@ -1,6 +1,7 @@
 // Material Item Component
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Linking } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Material } from '@/types/material';
 import { colors, spacing, borderRadius } from '@/theme/colors';
 
@@ -9,21 +10,24 @@ interface MaterialItemProps {
   onDownload: (material: Material) => void;
 }
 
+function getFileIconName(fileType?: string): React.ComponentProps<typeof Ionicons>['name'] {
+  if (!fileType) return 'document';
+  const lower = fileType.toLowerCase();
+  if (lower.includes('pdf')) return 'document-text';
+  if (lower.includes('word') || lower.includes('document')) return 'document';
+  if (lower.includes('powerpoint') || lower.includes('presentation')) return 'document-attach';
+  if (lower.includes('video')) return 'videocam';
+  if (lower.includes('zip') || lower.includes('archive')) return 'archive';
+  return 'document';
+}
+
 export function MaterialItem({ material, onDownload }: MaterialItemProps) {
-  const getFileIcon = (fileType?: string) => {
-    if (!fileType) return '📄';
-    if (fileType.includes('pdf')) return '📕';
-    if (fileType.includes('word') || fileType.includes('document')) return '📘';
-    if (fileType.includes('powerpoint') || fileType.includes('presentation')) return '📙';
-    if (fileType.includes('video')) return '🎬';
-    if (fileType.includes('zip') || fileType.includes('archive')) return '📦';
-    return '📄';
-  };
+  const iconName = getFileIconName(material.file_type);
 
   return (
     <View style={styles.container}>
       <View style={styles.icon}>
-        <Text style={styles.iconText}>{getFileIcon(material.file_type)}</Text>
+        <Ionicons name={iconName} size={26} color={colors.primary} />
       </View>
       
       <View style={styles.content}>
@@ -31,11 +35,13 @@ export function MaterialItem({ material, onDownload }: MaterialItemProps) {
         <Text style={styles.type}>{material?.file_type || 'File'}</Text>
       </View>
       
-      <TouchableOpacity 
+      <TouchableOpacity
         style={styles.downloadButton}
         onPress={() => onDownload(material)}
+        activeOpacity={0.7}
       >
-        <Text style={styles.downloadText}>⬇️</Text>
+        <Ionicons name="download-outline" size={20} color={colors.primary} />
+        <Text style={styles.downloadText}>Download</Text>
       </TouchableOpacity>
     </View>
   );
@@ -59,13 +65,10 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: borderRadius.lg,
-    backgroundColor: '#f0f9ff',
+    backgroundColor: `${colors.primary}14`,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.md,
-  },
-  iconText: {
-    fontSize: 22,
   },
   content: {
     flex: 1,
@@ -82,14 +85,19 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
   downloadButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: colors.primary,
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 10,
+    backgroundColor: `${colors.primary}14`,
+    borderWidth: 1,
+    borderColor: `${colors.primary}40`,
   },
   downloadText: {
-    fontSize: 18,
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary,
   },
 });

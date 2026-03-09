@@ -15,7 +15,7 @@ export function AuthHomeScreen({ onSignIn, onCreateAccount }: AuthHomeScreenProp
       <View style={styles.content}>
         <View style={styles.header}>
             <PiLogo size={72} />
-            <Text style={styles.title}>PiResearch Labs</Text>
+            <Text style={styles.title}>PiLearn</Text>
           <Text style={styles.subtitle}>Student</Text>
         </View>
 
@@ -28,7 +28,7 @@ export function AuthHomeScreen({ onSignIn, onCreateAccount }: AuthHomeScreenProp
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.footer}>Powered by PiResearch Labs</Text>
+        <Text style={styles.footer}>Powered by PiLearn</Text>
       </View>
     </SafeAreaView>
   );

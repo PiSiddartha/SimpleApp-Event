@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   ActivityIndicator 
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useEvents } from '@/hooks/useEvents';
 import { EventCard } from '@/components/EventCard';
 import { Event } from '@/types/event';
@@ -17,10 +18,10 @@ import { colors, spacing } from '@/theme/colors';
 interface HomeScreenProps {
   onEventPress: (event: Event) => void;
   onScanPress: () => void;
-  onLogout?: () => void;
+  onProfilePress?: () => void;
 }
 
-export function HomeScreen({ onEventPress, onScanPress, onLogout }: HomeScreenProps) {
+export function HomeScreen({ onEventPress, onScanPress, onProfilePress }: HomeScreenProps) {
   const { data: events, isLoading, error } = useEvents();
   
   const renderEvent = ({ item }: { item: Event }) => (
@@ -35,22 +36,35 @@ export function HomeScreen({ onEventPress, onScanPress, onLogout }: HomeScreenPr
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>Welcome back</Text>
-          <Text style={styles.title}>Upcoming Events</Text>
+          <Text style={styles.title}>Events</Text>
         </View>
-        {onLogout ? (
-          <TouchableOpacity style={styles.logoutButton} onPress={onLogout} activeOpacity={0.7}>
-            <Text style={styles.logoutText}>Sign out</Text>
+        {onProfilePress ? (
+          <TouchableOpacity style={styles.profileButton} onPress={onProfilePress} activeOpacity={0.7}>
+            <Ionicons name="person-circle-outline" size={32} color={colors.primary} />
           </TouchableOpacity>
         ) : null}
       </View>
 
-      <TouchableOpacity 
-        style={styles.scanButton}
+      {/* QR-first: primary action */}
+      <TouchableOpacity
+        style={styles.qrCard}
         onPress={onScanPress}
-        activeOpacity={0.8}
+        activeOpacity={0.85}
       >
-        <Text style={styles.scanText}>Scan QR Code</Text>
+        <View style={styles.qrIconWrap}>
+          <Ionicons name="qr-code-outline" size={40} color={colors.primary} />
+        </View>
+        <View style={styles.qrContent}>
+          <Text style={styles.qrTitle}>Scan event QR</Text>
+          <Text style={styles.qrSubtext}>Scan a QR code at the venue to join an event</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={24} color={colors.primary} />
       </TouchableOpacity>
+
+      {/* View available events section */}
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>View available events</Text>
+      </View>
 
       {isLoading ? (
         <View style={styles.loadingContainer}>
@@ -72,7 +86,7 @@ export function HomeScreen({ onEventPress, onScanPress, onLogout }: HomeScreenPr
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No upcoming events</Text>
               <Text style={styles.emptySubtext}>
-                Scan a QR code to join an event
+                Scan a QR code at an event to join, or check back later
               </Text>
             </View>
           }
@@ -94,14 +108,8 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     paddingBottom: spacing.sm,
   },
-  logoutButton: {
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-  },
-  logoutText: {
-    fontSize: 14,
-    color: colors.primary,
-    fontWeight: '600',
+  profileButton: {
+    padding: spacing.xs,
   },
   greeting: {
     fontSize: 14,
@@ -113,23 +121,56 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: colors.text,
   },
-  scanButton: {
+  qrCard: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.primary,
     marginHorizontal: spacing.xl,
     marginBottom: spacing.lg,
     padding: spacing.lg,
-    borderRadius: 12,
+    backgroundColor: colors.backgroundCard,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
-  scanText: {
-    color: colors.white,
+  qrIconWrap: {
+    width: 56,
+    height: 56,
+    borderRadius: 12,
+    backgroundColor: `${colors.primary}18`,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
+  },
+  qrContent: {
+    flex: 1,
+  },
+  qrTitle: {
     fontSize: 17,
-    fontWeight: '600',
+    fontWeight: '700',
+    color: colors.text,
+    marginBottom: 2,
+  },
+  qrSubtext: {
+    fontSize: 14,
+    color: colors.textSecondary,
+  },
+  sectionHeader: {
+    paddingHorizontal: spacing.xl,
+    marginBottom: spacing.md,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: colors.text,
   },
   list: {
     padding: spacing.xl,
-    paddingTop: spacing.sm,
+    paddingTop: 0,
   },
   loadingContainer: {
     flex: 1,

@@ -43,13 +43,7 @@ class ApiService {
         if (status === 401 && !config?._retried) {
           await authService.clearStorage();
         }
-        if (status === 403) {
-          const data = error.response?.data as { error?: string; message?: string } | undefined;
-          const message = `${data?.error ?? ''} ${data?.message ?? ''}`.toLowerCase();
-          if (message.includes('required role') || message.includes('forbidden')) {
-            await authService.clearStorage();
-          }
-        }
+        // 403 = forbidden for this resource (e.g. admin-only endpoint); user is still authenticated — do not clear auth
         return Promise.reject(error);
       }
     );

@@ -1,5 +1,5 @@
 // Authentication service using AWS Amplify (Cognito)
-import { signIn, signOut, signUp, confirmSignUp, resendSignUpCode, getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
+import { signIn, signOut, signUp, confirmSignUp, resendSignUpCode, getCurrentUser, fetchAuthSession, fetchUserAttributes } from 'aws-amplify/auth';
 import * as SecureStore from 'expo-secure-store';
 
 export type SignUpOptions = { givenName?: string; familyName?: string };
@@ -38,10 +38,7 @@ class AuthService {
       await SecureStore.setItemAsync(TOKEN_KEY, idToken);
 
       const user = await getCurrentUser();
-      const userData = {
-        id: user?.userId ?? '',
-        email: user?.signInDetails?.loginId ?? email,
-      };
+      const userData = await this.buildUserData(user?.userId ?? '', user?.signInDetails?.loginId ?? email);
       await SecureStore.setItemAsync(USER_KEY, JSON.stringify(userData));
 
       return { success: true, user: userData };
@@ -75,7 +72,7 @@ class AuthService {
             await SecureStore.setItemAsync(ID_TOKEN_KEY, idToken);
             await SecureStore.setItemAsync(TOKEN_KEY, idToken);
             const user = await getCurrentUser();
-            const userData = { id: user?.userId ?? '', email: user?.signInDetails?.loginId ?? email };
+            const userData = await this.buildUserData(user?.userId ?? '', user?.signInDetails?.loginId ?? email);
             await SecureStore.setItemAsync(USER_KEY, JSON.stringify(userData));
             return { success: true, user: userData };
           }
@@ -214,6 +211,24 @@ class AuthService {
     this.onUnauthorized?.();
   }
 
+  /** Build user payload with id, email, and name attributes from Cognito. */
+  private async buildUserData(id: string, email: string): Promise<{ id: string; email: string; name?: string; given_name?: string; family_name?: string }> {
+    const data: { id: string; email: string; name?: string; given_name?: string; family_name?: string } = { id, email };
+    try {
+      const attrs = await fetchUserAttributes();
+      const given = attrs?.given_name ?? attrs?.['given_name'];
+      const family = attrs?.family_name ?? attrs?.['family_name'];
+      const name = attrs?.name ?? attrs?.['name'];
+      if (given) data.given_name = given;
+      if (family) data.family_name = family;
+      if (name) data.name = name;
+      else if (given || family) data.name = [given, family].filter(Boolean).join(' ').trim();
+    } catch (_) {
+      // attributes optional
+    }
+    return data;
+  }
+
   async getCurrentUser() {
     try {
       const userData = await SecureStore.getItemAsync(USER_KEY);
@@ -222,10 +237,7 @@ class AuthService {
       }
       const user = await getCurrentUser();
       if (user) {
-        const data = {
-          id: user.userId,
-          email: user.signInDetails?.loginId ?? '',
-        };
+        const data = await this.buildUserData(user.userId, user.signInDetails?.loginId ?? '');
         return { success: true, user: data };
       }
       return { success: false, user: null };
@@ -262,7 +274,7 @@ class AuthService {
       await SecureStore.setItemAsync(ID_TOKEN_KEY, idToken);
       await SecureStore.setItemAsync(TOKEN_KEY, idToken);
       const user = await getCurrentUser();
-      const userData = { id: user?.userId ?? '', email: user?.signInDetails?.loginId ?? '' };
+      const userData = await this.buildUserData(user?.userId ?? '', user?.signInDetails?.loginId ?? '');
       await SecureStore.setItemAsync(USER_KEY, JSON.stringify(userData));
       return true;
     } catch {

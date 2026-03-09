@@ -6,17 +6,17 @@ project_name  = "payintelli"
 # Database
 db_instance_class    = "db.t4g.micro"
 db_allocated_storage = 20
-db_name              = "PiResearchLabs"
-db_username          = "PiResearchAdmin"
+db_name              = "PiLearn"
+db_username          = "PiLearnAdmin"
 # RDS allows only printable ASCII except /, @, ", and space
-db_password          = "PiResearchLabs2026Secure"
+db_password          = "PiLearn2026Secure"
 
 # Cognito (optional: cognito_domain = "payintelli" if unique; else default is project_name-account_id)
 cognito_pool_name   = "payintelli-users"
 cognito_client_name = "payintelli-app"
 
 # S3
-materials_bucket_name = "piresearchlabs-materials"
+materials_bucket_name = "pilearn-materials"
 
 # Lambda
 lambda_timeout     = 30

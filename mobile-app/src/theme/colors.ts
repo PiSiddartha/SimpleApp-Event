@@ -1,5 +1,5 @@
 /**
- * PiResearch Labs app theme – colors and spacing.
+ * PiLearn app theme – colors and spacing.
  */
 export const colors = {
   primary: '#0ea5e9',

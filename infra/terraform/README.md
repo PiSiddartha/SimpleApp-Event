@@ -183,7 +183,7 @@ Example: `GET https://xxx.execute-api.ap-south-1.amazonaws.com/events`
 
 **Private only (production):** Set `db_publicly_accessible = false` and leave public subnet IDs empty. Use a bastion or Session Manager to connect.
 
-**Credentials** (from `terraform.tfvars`): use the **full** password, e.g. `PiResearchLabs2026#Secure` (not `PiResearchLabs2026#`). Database name: `PiResearchLabs`, user: `piresearchlabs_admin`, port: `5432`.
+**Credentials** (from `terraform.tfvars`): use the **full** password, e.g. `PiLearn2026#Secure` (not `PiLearn2026#`). Database name: `PiLearn`, user: `pilearn_admin`, port: `5432`.
 
 **Ways to connect:**
 

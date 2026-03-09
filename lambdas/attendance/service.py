@@ -6,7 +6,7 @@ Business logic for attendance operations.
 import uuid
 import logging
 from typing import Dict, Any, Optional, List
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from events.repository import EventRepository
 from attendance.repository import AttendanceRepository
@@ -59,14 +59,19 @@ class AttendanceService:
         
         if event.start_time:
             # Allow joining 15 minutes before start
-            allowed_start = event.start_time.replace(tzinfo=timezone.utc)
+            start_utc = event.start_time
+            if start_utc.tzinfo is None:
+                start_utc = start_utc.replace(tzinfo=timezone.utc)
+            allowed_start = start_utc - timedelta(minutes=15)
             if now < allowed_start:
                 logger.info(f"Event {event_id} has not started yet")
                 return "not_started"
         
         if event.end_time:
             # Check if event has ended
-            event_end = event.end_time.replace(tzinfo=timezone.utc)
+            event_end = event.end_time
+            if event_end.tzinfo is None:
+                event_end = event_end.replace(tzinfo=timezone.utc)
             if now > event_end:
                 logger.info(f"Event {event_id} has already ended")
                 return "ended"

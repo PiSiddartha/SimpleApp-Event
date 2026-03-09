@@ -1,5 +1,5 @@
 // Event Screen
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   Text, 
@@ -9,8 +9,9 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Linking 
+  Linking,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useEvent, useJoinEvent, useEventAnalytics } from '@/hooks/useEvents';
 import { usePolls } from '@/hooks/usePolls';
 import { useMaterials } from '@/hooks/useMaterials';
@@ -46,11 +47,11 @@ export function EventScreen({ eventId, onBack, onPollPress }: EventScreenProps) 
       setJoined(true);
       Alert.alert('Success', 'You have joined the event!');
     } catch (error: any) {
-      const msg = error.response?.data?.message ?? '';
+      const msg = (error.response?.data?.message ?? error.response?.data?.error ?? '').trim();
       if (msg.includes('already joined') || msg.includes('already checked into')) {
         setJoined(true);
       } else {
-        Alert.alert('Error', 'Failed to join event');
+        Alert.alert('Error', msg || 'Failed to join event');
       }
     }
   };
@@ -137,59 +138,67 @@ export function EventScreen({ eventId, onBack, onPollPress }: EventScreenProps) 
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={onBack} style={styles.backButton}>
-            <Text style={styles.backText}>← Back</Text>
+          <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.7}>
+            <Ionicons name="arrow-back" size={22} color={colors.text} />
+            <Text style={styles.backText}>Back</Text>
           </TouchableOpacity>
-          
           <Text style={styles.title}>{event.name}</Text>
-          
-          {event.description && (
+          {event.description ? (
             <Text style={styles.description}>{event.description}</Text>
-          )}
+          ) : null}
         </View>
 
-        {/* Event Info */}
-        <View style={styles.section}>
+        {/* Event Info Card */}
+        <View style={styles.infoCard}>
           <View style={styles.infoRow}>
+            <Ionicons name="calendar-outline" size={18} color={colors.textMuted} />
             <Text style={styles.infoLabel}>Date</Text>
             <Text style={styles.infoText}>{formatDate(event.start_time)}</Text>
           </View>
           {event.location ? (
             <View style={styles.infoRow}>
+              <Ionicons name="location-outline" size={18} color={colors.textMuted} />
               <Text style={styles.infoLabel}>Location</Text>
               <Text style={styles.infoText}>{event.location}</Text>
             </View>
           ) : null}
-          <View style={styles.infoRow}>
+          <View style={[styles.infoRow, styles.infoRowLast]}>
+            <Ionicons name="pricetag-outline" size={18} color={colors.textMuted} />
             <Text style={styles.infoLabel}>Type</Text>
             <Text style={styles.infoText}>{event.event_type ?? '—'}</Text>
           </View>
         </View>
 
-        {/* Join Button */}
-        {!joined && (
-          <TouchableOpacity 
-            style={styles.joinButton}
+        {/* Join / Attending */}
+        {!joined ? (
+          <TouchableOpacity
+            style={[styles.joinButton, joinEvent.isPending && styles.joinButtonDisabled]}
             onPress={handleJoin}
             disabled={joinEvent.isPending}
+            activeOpacity={0.85}
           >
             {joinEvent.isPending ? (
-              <ActivityIndicator color={colors.white} />
+              <ActivityIndicator color={colors.white} size="small" />
             ) : (
-              <Text style={styles.joinButtonText}>Join Event</Text>
+              <>
+                <Ionicons name="checkmark-circle-outline" size={22} color={colors.white} />
+                <Text style={styles.joinButtonText}>Join event</Text>
+              </>
             )}
           </TouchableOpacity>
-        )}
-
-        {joined && (
+        ) : (
           <View style={styles.joinedBanner}>
+            <Ionicons name="checkmark-circle" size={20} color={colors.success} />
             <Text style={styles.joinedText}>You're attending this event</Text>
           </View>
         )}
 
         {/* Polls Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Polls</Text>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="bar-chart-outline" size={20} color={colors.primary} />
+            <Text style={styles.sectionTitle}>Polls</Text>
+          </View>
           
           {pollsLoading ? (
             <ActivityIndicator color={colors.primary} />
@@ -208,7 +217,10 @@ export function EventScreen({ eventId, onBack, onPollPress }: EventScreenProps) 
 
         {/* Materials Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Materials</Text>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="document-text-outline" size={20} color={colors.primary} />
+            <Text style={styles.sectionTitle}>Materials</Text>
+          </View>
           
           {materialsLoading ? (
             <ActivityIndicator color={colors.primary} />
@@ -227,7 +239,10 @@ export function EventScreen({ eventId, onBack, onPollPress }: EventScreenProps) 
 
         {/* Leaderboard Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Leaderboard</Text>
+          <View style={styles.sectionHeader}>
+            <Ionicons name="podium-outline" size={20} color={colors.primary} />
+            <Text style={styles.sectionTitle}>Leaderboard</Text>
+          </View>
           {topStudents.length > 0 ? (
             topStudents.slice(0, 10).map((student: { user_id?: string; score?: number; total_actions?: number }, index: number) => (
               <View key={student?.user_id ?? `leader-${index}`} style={styles.leaderboardRow}>
@@ -284,22 +299,26 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   header: {
-    padding: spacing.xl,
-    paddingBottom: 0,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.lg,
   },
   backButton: {
-    marginBottom: spacing.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.lg,
   },
   backText: {
     fontSize: 16,
-    color: colors.primary,
+    color: colors.text,
     fontWeight: '500',
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   description: {
     fontSize: 15,
@@ -307,31 +326,55 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   section: {
-    padding: spacing.xl,
+    paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,
+  },
+  infoCard: {
+    marginHorizontal: spacing.xl,
+    backgroundColor: colors.backgroundCard,
+    borderRadius: 14,
+    padding: spacing.lg,
+    marginBottom: spacing.lg,
+    shadowColor: colors.black,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
   },
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 10,
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  infoRowLast: {
+    marginBottom: 0,
   },
   infoLabel: {
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: 13,
+    fontWeight: '500',
     color: colors.textMuted,
-    minWidth: 72,
+    minWidth: 64,
   },
   infoText: {
     fontSize: 15,
-    color: '#374151',
+    color: colors.text,
+    flex: 1,
   },
   joinButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
     marginHorizontal: spacing.xl,
     backgroundColor: colors.primary,
-    padding: spacing.lg,
-    borderRadius: borderRadius.xl,
-    alignItems: 'center',
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xl,
+    borderRadius: 14,
+    marginBottom: spacing.lg,
+  },
+  joinButtonDisabled: {
+    opacity: 0.85,
   },
   joinButtonText: {
     color: colors.white,
@@ -339,22 +382,32 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   joinedBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
     marginHorizontal: spacing.xl,
     backgroundColor: colors.successBg,
-    padding: 14,
-    borderRadius: borderRadius.xl,
-    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: 14,
+    marginBottom: spacing.lg,
   },
   joinedText: {
     color: colors.success,
     fontSize: 15,
     fontWeight: '600',
   },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+  },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: 14,
   },
   emptyText: {
     fontSize: 14,
