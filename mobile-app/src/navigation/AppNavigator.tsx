@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Text, View, StyleSheet } from 'react-native';
+import { Text, View, StyleSheet, TouchableOpacity } from 'react-native';
 
 import { LoginScreen } from '@/screens/LoginScreen';
 import { HomeScreen } from '@/screens/HomeScreen';
@@ -12,24 +12,24 @@ import { PollScreen } from '@/screens/PollScreen';
 import { MaterialsScreen } from '@/screens/MaterialsScreen';
 import { LeaderboardScreen } from '@/screens/LeaderboardScreen';
 import { QRScannerScreen } from '@/screens/QRScannerScreen';
-import { authService } from '@/services/auth';
+import { colors, spacing } from '@/theme/colors';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
 // Main Tab Navigator
-function MainTabs() {
+function MainTabs({ onLogout }: { onLogout: (() => void) | null }) {
   return (
     <Tab.Navigator
       screenOptions={{
-        tabBarActiveTintColor: '#0ea5e9',
-        tabBarInactiveTintColor: '#9ca3af',
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
           height: 85,
           paddingBottom: 25,
           paddingTop: 10,
-          backgroundColor: '#fff',
-          borderTopColor: '#e5e7eb',
+          backgroundColor: colors.backgroundCard,
+          borderTopColor: colors.border,
         },
         tabBarLabelStyle: {
           fontSize: 12,
@@ -52,12 +52,13 @@ function MainTabs() {
             <Stack.Screen name="HomeMain">
               {({ navigation }: any) => (
                 <HomeScreen
-                  onEventPress={(event) => 
+                  onEventPress={(event) =>
                     navigation.navigate('Event', { eventId: event.id })
                   }
-                  onScanPress={() => 
+                  onScanPress={() =>
                     navigation.navigate('QRScanner')
                   }
+                  onLogout={onLogout ? () => onLogout() : undefined}
                 />
               )}
             </Stack.Screen>
@@ -65,6 +66,15 @@ function MainTabs() {
               {({ route, navigation }: any) => (
                 <EventScreen
                   eventId={route.params?.eventId}
+                  onBack={() => navigation.goBack()}
+                  onPollPress={(pollId) => navigation.navigate('Poll', { pollId })}
+                />
+              )}
+            </Stack.Screen>
+            <Stack.Screen name="Poll">
+              {({ route, navigation }: any) => (
+                <PollScreen
+                  pollId={route.params?.pollId}
                   onBack={() => navigation.goBack()}
                 />
               )}
@@ -112,14 +122,14 @@ function MainTabs() {
 }
 
 // Placeholder screen component
-function PlaceholderScreen({ 
-  title, 
-  icon, 
+function PlaceholderScreen({
+  title,
+  icon,
   description,
-  onAction 
-}: { 
-  title: string; 
-  icon: string; 
+  onAction,
+}: {
+  title: string;
+  icon: string;
   description: string;
   onAction?: () => void;
 }) {
@@ -128,6 +138,11 @@ function PlaceholderScreen({
       <Text style={placeholderStyles.placeholderIcon}>{icon}</Text>
       <Text style={placeholderStyles.placeholderTitle}>{title}</Text>
       <Text style={placeholderStyles.placeholderDesc}>{description}</Text>
+      {onAction ? (
+        <TouchableOpacity style={placeholderStyles.actionButton} onPress={onAction} activeOpacity={0.7}>
+          <Text style={placeholderStyles.actionButtonText}>View Events</Text>
+        </TouchableOpacity>
+      ) : null}
     </View>
   );
 }
@@ -137,43 +152,69 @@ const placeholderStyles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f9fafb',
-    padding: 24,
+    backgroundColor: colors.background,
+    padding: spacing.xxl,
   },
   placeholderIcon: {
     fontSize: 56,
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   placeholderTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#111',
-    marginBottom: 8,
+    color: colors.text,
+    marginBottom: spacing.sm,
   },
   placeholderDesc: {
     fontSize: 15,
-    color: '#6b7280',
+    color: colors.textSecondary,
     textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+  actionButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.xl,
+    paddingVertical: spacing.md,
+    borderRadius: 12,
+    marginTop: spacing.sm,
+  },
+  actionButtonText: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 
-// Auth or Main App
+// Auth or Main App – load auth after Amplify config so we don't trigger Amplify before it's ready
 export function AppNavigator() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [logoutFn, setLogoutFn] = useState<(() => void) | null>(null);
 
   useEffect(() => {
-    checkAuth();
+    let cancelled = false;
+    import('@/config/amplify')
+      .then(() => import('@/services/auth'))
+      .then(({ authService }) => {
+        if (cancelled) return;
+        authService.setOnUnauthorized(() => setRefreshKey((k) => k + 1));
+        setLogoutFn(() => () => authService.logout());
+        return authService.isAuthenticated();
+      })
+      .then((authenticated) => {
+        if (!cancelled) setIsAuthenticated(!!authenticated);
+      })
+      .catch(() => {
+        if (!cancelled) setIsAuthenticated(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [refreshKey]);
 
-  const checkAuth = async () => {
-    const authenticated = await authService.isAuthenticated();
-    setIsAuthenticated(authenticated);
-  };
-
-  const handleLoginSuccess = () => {
-    setRefreshKey(prev => prev + 1);
-  };
+  const handleLoginSuccessStable = React.useCallback(() => {
+    setRefreshKey((prev) => prev + 1);
+  }, []);
 
   if (isAuthenticated === null) {
     return (
@@ -185,7 +226,11 @@ export function AppNavigator() {
 
   return (
     <NavigationContainer>
-      {isAuthenticated ? <MainTabs /> : <AuthStack onLoginSuccess={handleLoginSuccess} />}
+      {isAuthenticated ? (
+        <MainTabs onLogout={logoutFn} />
+      ) : (
+        <AuthStack onLoginSuccess={handleLoginSuccessStable} />
+      )}
     </NavigationContainer>
   );
 }
@@ -195,9 +240,7 @@ function AuthStack({ onLoginSuccess }: { onLoginSuccess: () => void }) {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Login">
-        {() => (
-          <LoginScreen onLoginSuccess={onLoginSuccess} />
-        )}
+        {() => <LoginScreen onLoginSuccess={onLoginSuccess} />}
       </Stack.Screen>
     </Stack.Navigator>
   );
@@ -208,10 +251,10 @@ const loadingStyles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.background,
   },
   loadingText: {
     fontSize: 16,
-    color: '#6b7280',
+    color: colors.textSecondary,
   },
 });

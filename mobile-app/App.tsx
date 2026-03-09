@@ -1,5 +1,7 @@
-// Main App Entry
-import React from 'react';
+// Main App Entry – polyfill must load before any Amplify code
+import 'react-native-get-random-values';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppNavigator } from '@/navigation/AppNavigator';
@@ -15,6 +17,25 @@ const queryClient = new QueryClient({
 });
 
 export default function App() {
+  const [amplifyReady, setAmplifyReady] = useState(false);
+
+  useEffect(() => {
+    import('@/config/amplify')
+      .then(() => setAmplifyReady(true))
+      .catch((e) => {
+        console.warn('Amplify config load failed:', e);
+        setAmplifyReady(true);
+      });
+  }, []);
+
+  if (!amplifyReady) {
+    return (
+      <View style={styles.loading}>
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <StatusBar style="dark" />
@@ -22,3 +43,16 @@ export default function App() {
     </QueryClientProvider>
   );
 }
+
+const styles = StyleSheet.create({
+  loading: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f9fafb',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#6b7280',
+  },
+});

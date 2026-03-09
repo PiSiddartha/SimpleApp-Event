@@ -12,7 +12,7 @@ import {
   ActivityIndicator,
   Alert 
 } from 'react-native';
-import { authService } from '@/services/auth';
+import { colors, spacing, borderRadius } from '@/theme/colors';
 
 interface LoginScreenProps {
   onLoginSuccess: () => void;
@@ -33,15 +33,20 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
     setLoading(true);
     setError('');
 
-    const result = await authService.login(email, password);
-    
-    if (result.success) {
-      onLoginSuccess();
-    } else {
-      setError(result.error || 'Login failed');
+    try {
+      const { authService } = await import('@/services/auth');
+      const result = await authService.login(email, password);
+
+      if (result.success) {
+        onLoginSuccess();
+      } else {
+        setError(result.error || 'Login failed');
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Login failed');
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   return (
@@ -74,7 +79,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={colors.textMuted}
               />
             </View>
 
@@ -86,7 +91,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
                 onChangeText={setPassword}
                 placeholder="••••••••"
                 secureTextEntry
-                placeholderTextColor="#9ca3af"
+                placeholderTextColor={colors.textMuted}
               />
             </View>
 
@@ -96,7 +101,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color={colors.white} />
               ) : (
                 <Text style={styles.buttonText}>Sign In</Text>
               )}
@@ -115,14 +120,14 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.background,
   },
   keyboardView: {
     flex: 1,
   },
   content: {
     flex: 1,
-    padding: 24,
+    padding: spacing.xxl,
     justifyContent: 'center',
   },
   header: {
@@ -131,34 +136,34 @@ const styles = StyleSheet.create({
   },
   logo: {
     fontSize: 56,
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   title: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#0ea5e9',
-    marginBottom: 4,
+    color: colors.primary,
+    marginBottom: spacing.xs,
   },
   subtitle: {
     fontSize: 16,
-    color: '#6b7280',
+    color: colors.textSecondary,
   },
   errorBox: {
-    backgroundColor: '#fef2f2',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
+    backgroundColor: colors.errorBg,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.lg,
   },
   errorText: {
-    color: '#dc2626',
+    color: colors.error,
     fontSize: 14,
     textAlign: 'center',
   },
   form: {
-    gap: 16,
+    marginBottom: spacing.lg,
   },
   inputGroup: {
-    gap: 6,
+    marginBottom: 6,
   },
   label: {
     fontSize: 14,
@@ -166,32 +171,32 @@ const styles = StyleSheet.create({
     color: '#374151',
   },
   input: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
     padding: 14,
     fontSize: 16,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
-    color: '#111',
+    borderColor: colors.border,
+    color: colors.text,
   },
   button: {
-    backgroundColor: '#0ea5e9',
-    padding: 16,
-    borderRadius: 10,
+    backgroundColor: colors.primary,
+    padding: spacing.lg,
+    borderRadius: borderRadius.lg,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: spacing.sm,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   buttonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '600',
   },
   footer: {
     textAlign: 'center',
-    color: '#9ca3af',
+    color: colors.textMuted,
     fontSize: 13,
     marginTop: 32,
   },

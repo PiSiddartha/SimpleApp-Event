@@ -11,7 +11,7 @@ import {
   Alert,
   Linking 
 } from 'react-native';
-import { useEvent, useJoinEvent } from '@/hooks/useEvents';
+import { useEvent, useJoinEvent, useEventAnalytics } from '@/hooks/useEvents';
 import { usePolls } from '@/hooks/usePolls';
 import { useMaterials } from '@/hooks/useMaterials';
 import { PollCard } from '@/components/PollCard';
@@ -19,22 +19,26 @@ import { MaterialItem } from '@/components/MaterialItem';
 import { Poll } from '@/types/poll';
 import { Material } from '@/types/material';
 import { api } from '@/services/api';
+import { colors, spacing, borderRadius } from '@/theme/colors';
 
 interface EventScreenProps {
   eventId: string;
   onBack: () => void;
+  onPollPress?: (pollId: string) => void;
 }
 
-export function EventScreen({ eventId, onBack }: EventScreenProps) {
+export function EventScreen({ eventId, onBack, onPollPress }: EventScreenProps) {
   const { data: event, isLoading: eventLoading } = useEvent(eventId);
   const { data: pollsData, isLoading: pollsLoading } = usePolls(eventId);
   const { data: materialsData, isLoading: materialsLoading } = useMaterials(eventId);
   const joinEvent = useJoinEvent();
+  const { data: analytics } = useEventAnalytics(eventId);
   const [joined, setJoined] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
 
-  const polls = pollsData?.polls || pollsData || [];
-  const materials = materialsData?.materials || materialsData || [];
+  const polls = Array.isArray(pollsData) ? pollsData : pollsData?.polls || [];
+  const materials = Array.isArray(materialsData) ? materialsData : materialsData?.materials || [];
+  const topStudents = analytics?.top_students ?? [];
 
   const handleJoin = async () => {
     try {
@@ -42,7 +46,8 @@ export function EventScreen({ eventId, onBack }: EventScreenProps) {
       setJoined(true);
       Alert.alert('Success', 'You have joined the event!');
     } catch (error: any) {
-      if (error.response?.data?.message?.includes('already joined')) {
+      const msg = error.response?.data?.message ?? '';
+      if (msg.includes('already joined') || msg.includes('already checked into')) {
         setJoined(true);
       } else {
         Alert.alert('Error', 'Failed to join event');
@@ -51,22 +56,27 @@ export function EventScreen({ eventId, onBack }: EventScreenProps) {
   };
 
   const handleVote = (poll: Poll) => {
-    // Navigate to poll voting
-    Alert.alert(
-      poll.question,
-      'Select an option to vote',
-      poll.options?.map(option => ({
-        text: option.option_text,
-        onPress: async () => {
-          try {
-            await api.castVote(poll.id, option.id);
-            Alert.alert('Success', 'Your vote has been recorded!');
-          } catch {
-            Alert.alert('Error', 'Failed to submit vote');
-          }
-        }
-      })) || []
-    );
+    if (onPollPress) {
+      onPollPress(poll.id);
+    } else {
+      const buttons =
+        poll.options?.map((option) => ({
+          text: option.option_text,
+          onPress: async () => {
+            try {
+              await api.castVote(poll.id, option.id);
+              Alert.alert('Success', 'Your vote has been recorded!');
+            } catch {
+              Alert.alert('Error', 'Failed to submit vote');
+            }
+          },
+        })) ?? [];
+      Alert.alert(
+        poll.question,
+        'Select an option to vote',
+        buttons.length > 0 ? buttons : [{ text: 'OK' }]
+      );
+    }
   };
 
   const handleDownload = async (material: Material) => {
@@ -86,7 +96,7 @@ export function EventScreen({ eventId, onBack }: EventScreenProps) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0ea5e9" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -145,7 +155,7 @@ export function EventScreen({ eventId, onBack }: EventScreenProps) {
           
           <View style={styles.infoRow}>
             <Text style={styles.infoIcon}>🏷️</Text>
-            <Text style={styles.infoText}>{event.event_type}</Text>
+            <Text style={styles.infoText}>{event.event_type ?? '—'}</Text>
           </View>
         </View>
 
@@ -157,7 +167,7 @@ export function EventScreen({ eventId, onBack }: EventScreenProps) {
             disabled={joinEvent.isPending}
           >
             {joinEvent.isPending ? (
-              <ActivityIndicator color="#fff" />
+              <ActivityIndicator color={colors.white} />
             ) : (
               <Text style={styles.joinButtonText}>✅ Join Event</Text>
             )}
@@ -175,7 +185,7 @@ export function EventScreen({ eventId, onBack }: EventScreenProps) {
           <Text style={styles.sectionTitle}>📊 Polls</Text>
           
           {pollsLoading ? (
-            <ActivityIndicator color="#0ea5e9" />
+            <ActivityIndicator color={colors.primary} />
           ) : polls.length > 0 ? (
             polls.map((poll: Poll) => (
               <PollCard 
@@ -194,7 +204,7 @@ export function EventScreen({ eventId, onBack }: EventScreenProps) {
           <Text style={styles.sectionTitle}>📚 Materials</Text>
           
           {materialsLoading ? (
-            <ActivityIndicator color="#0ea5e9" />
+            <ActivityIndicator color={colors.primary} />
           ) : materials.length > 0 ? (
             materials.map((material: Material) => (
               <MaterialItem
@@ -207,6 +217,31 @@ export function EventScreen({ eventId, onBack }: EventScreenProps) {
             <Text style={styles.emptyText}>No materials available</Text>
           )}
         </View>
+
+        {/* Leaderboard Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>🏆 Leaderboard</Text>
+          {topStudents.length > 0 ? (
+            topStudents.slice(0, 10).map((student: { user_id?: string; score?: number; total_actions?: number }, index: number) => (
+              <View key={student?.user_id ?? `leader-${index}`} style={styles.leaderboardRow}>
+                <Text style={styles.leaderboardRank}>
+                  {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}`}
+                </Text>
+                <View style={styles.leaderboardInfo}>
+                  <Text style={styles.leaderboardId} numberOfLines={1}>
+                    {student?.user_id
+                      ? `${student.user_id.slice(0, 8)}...${student.user_id.slice(-4)}`
+                      : '—'}
+                  </Text>
+                  <Text style={styles.leaderboardActions}>{student?.total_actions ?? 0} actions</Text>
+                </View>
+                <Text style={styles.leaderboardScore}>{student?.score ?? 0} pts</Text>
+              </View>
+            ))
+          ) : (
+            <Text style={styles.emptyText}>No rankings yet — participate in polls and materials to appear</Text>
+          )}
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -215,7 +250,7 @@ export function EventScreen({ eventId, onBack }: EventScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.background,
   },
   loadingContainer: {
     flex: 1,
@@ -228,35 +263,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorText: {
-    color: '#dc2626',
+    color: colors.error,
     fontSize: 16,
   },
   header: {
-    padding: 20,
+    padding: spacing.xl,
     paddingBottom: 0,
   },
   backButton: {
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   backText: {
     fontSize: 16,
-    color: '#0ea5e9',
+    color: colors.primary,
     fontWeight: '500',
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#111',
-    marginBottom: 8,
+    color: colors.text,
+    marginBottom: spacing.sm,
   },
   description: {
     fontSize: 15,
-    color: '#6b7280',
+    color: colors.textSecondary,
     lineHeight: 22,
   },
   section: {
-    padding: 20,
-    paddingTop: 16,
+    padding: spacing.xl,
+    paddingTop: spacing.lg,
   },
   infoRow: {
     flexDirection: 'row',
@@ -272,39 +307,71 @@ const styles = StyleSheet.create({
     color: '#374151',
   },
   joinButton: {
-    marginHorizontal: 20,
-    backgroundColor: '#0ea5e9',
-    padding: 16,
-    borderRadius: 12,
+    marginHorizontal: spacing.xl,
+    backgroundColor: colors.primary,
+    padding: spacing.lg,
+    borderRadius: borderRadius.xl,
     alignItems: 'center',
   },
   joinButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 17,
     fontWeight: '600',
   },
   joinedBanner: {
-    marginHorizontal: 20,
-    backgroundColor: '#dcfce7',
+    marginHorizontal: spacing.xl,
+    backgroundColor: colors.successBg,
     padding: 14,
-    borderRadius: 12,
+    borderRadius: borderRadius.xl,
     alignItems: 'center',
   },
   joinedText: {
-    color: '#16a34a',
+    color: colors.success,
     fontSize: 15,
     fontWeight: '600',
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#111',
+    color: colors.text,
     marginBottom: 14,
   },
   emptyText: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: colors.textMuted,
     textAlign: 'center',
     paddingVertical: 20,
+  },
+  leaderboardRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.backgroundCard,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  leaderboardRank: {
+    fontSize: 18,
+    width: 28,
+    textAlign: 'center',
+  },
+  leaderboardInfo: {
+    flex: 1,
+    marginLeft: spacing.sm,
+  },
+  leaderboardId: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.text,
+  },
+  leaderboardActions: {
+    fontSize: 12,
+    color: colors.textSecondary,
+    marginTop: 2,
+  },
+  leaderboardScore: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: colors.primary,
   },
 });

@@ -12,13 +12,15 @@ import {
 import { useEvents } from '@/hooks/useEvents';
 import { EventCard } from '@/components/EventCard';
 import { Event } from '@/types/event';
+import { colors, spacing } from '@/theme/colors';
 
 interface HomeScreenProps {
   onEventPress: (event: Event) => void;
   onScanPress: () => void;
+  onLogout?: () => void;
 }
 
-export function HomeScreen({ onEventPress, onScanPress }: HomeScreenProps) {
+export function HomeScreen({ onEventPress, onScanPress, onLogout }: HomeScreenProps) {
   const { data: events, isLoading, error } = useEvents();
   
   const renderEvent = ({ item }: { item: Event }) => (
@@ -35,6 +37,11 @@ export function HomeScreen({ onEventPress, onScanPress }: HomeScreenProps) {
           <Text style={styles.greeting}>Welcome back! 👋</Text>
           <Text style={styles.title}>Upcoming Events</Text>
         </View>
+        {onLogout ? (
+          <TouchableOpacity style={styles.logoutButton} onPress={onLogout} activeOpacity={0.7}>
+            <Text style={styles.logoutText}>Sign out</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
       <TouchableOpacity 
@@ -48,7 +55,7 @@ export function HomeScreen({ onEventPress, onScanPress }: HomeScreenProps) {
 
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0ea5e9" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading events...</Text>
         </View>
       ) : error ? (
@@ -80,30 +87,42 @@ export function HomeScreen({ onEventPress, onScanPress }: HomeScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.background,
   },
   header: {
-    padding: 20,
-    paddingBottom: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.xl,
+    paddingBottom: spacing.sm,
+  },
+  logoutButton: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  logoutText: {
+    fontSize: 14,
+    color: colors.primary,
+    fontWeight: '600',
   },
   greeting: {
     fontSize: 14,
-    color: '#6b7280',
+    color: colors.textSecondary,
     marginBottom: 2,
   },
   title: {
     fontSize: 26,
     fontWeight: '700',
-    color: '#111',
+    color: colors.text,
   },
   scanButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0ea5e9',
-    marginHorizontal: 20,
-    marginBottom: 16,
-    padding: 16,
+    backgroundColor: colors.primary,
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.lg,
+    padding: spacing.lg,
     borderRadius: 12,
     gap: 10,
   },
@@ -111,22 +130,22 @@ const styles = StyleSheet.create({
     fontSize: 22,
   },
   scanText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 17,
     fontWeight: '600',
   },
   list: {
-    padding: 20,
-    paddingTop: 8,
+    padding: spacing.xl,
+    paddingTop: spacing.sm,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
+    gap: spacing.md,
   },
   loadingText: {
-    color: '#6b7280',
+    color: colors.textSecondary,
     fontSize: 15,
   },
   errorContainer: {
@@ -135,7 +154,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorText: {
-    color: '#dc2626',
+    color: colors.error,
     fontSize: 15,
   },
   emptyContainer: {
@@ -146,16 +165,16 @@ const styles = StyleSheet.create({
   },
   emptyIcon: {
     fontSize: 48,
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
     color: '#374151',
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: colors.textMuted,
   },
 });

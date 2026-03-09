@@ -7,7 +7,7 @@ export interface Poll {
   created_by?: string;
   status: 'draft' | 'active' | 'closed';
   created_at: string;
-  options: PollOption[];
+  options?: PollOption[];
 }
 
 export interface PollOption {

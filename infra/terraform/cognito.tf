@@ -55,7 +55,14 @@ resource "aws_cognito_user_pool_client" "main" {
   name         = var.cognito_client_name
   user_pool_id = aws_cognito_user_pool.main.id
 
-  # OAuth settings
+  # Required for mobile app (Amplify) sign-in with email/password; otherwise Cognito returns generic errors.
+  explicit_auth_flows = [
+    "ALLOW_USER_PASSWORD_AUTH",
+    "ALLOW_REFRESH_TOKEN_AUTH",
+    "ALLOW_USER_SRP_AUTH",
+  ]
+
+  # OAuth settings (Hosted UI)
   # Callback URLs: where Cognito redirects after sign-in (Hosted UI).
   # Sign out URLs: where Cognito may redirect after sign-out; must match logout_uri/redirect_uri in app.
   supported_identity_providers = ["COGNITO"]

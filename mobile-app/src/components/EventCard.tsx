@@ -2,6 +2,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Event } from '@/types/event';
+import { colors, spacing, borderRadius } from '@/theme/colors';
 
 interface EventCardProps {
   event: Event;
@@ -29,17 +30,20 @@ export function EventCard({ event, onPress }: EventCardProps) {
     }
   };
 
+  const status = event?.status ?? '';
+  const statusColor = getStatusColor(status);
+
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={styles.card}
       onPress={() => onPress(event)}
       activeOpacity={0.7}
     >
       <View style={styles.header}>
-        <Text style={styles.title} numberOfLines={1}>{event.name}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(event.status) + '20' }]}>
-          <Text style={[styles.statusText, { color: getStatusColor(event.status) }]}>
-            {event.status}
+        <Text style={styles.title} numberOfLines={1}>{event?.name ?? 'Event'}</Text>
+        <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
+          <Text style={[styles.statusText, { color: statusColor }]}>
+            {status || '—'}
           </Text>
         </View>
       </View>
@@ -69,11 +73,11 @@ export function EventCard({ event, onPress }: EventCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
+    backgroundColor: colors.backgroundCard,
+    borderRadius: borderRadius.xl,
+    padding: spacing.lg,
+    marginBottom: spacing.md,
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -83,19 +87,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: spacing.sm,
   },
   title: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#111',
+    color: colors.text,
     flex: 1,
-    marginRight: 8,
+    marginRight: spacing.sm,
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
   },
   statusText: {
     fontSize: 12,
@@ -104,25 +108,25 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 14,
-    color: '#6b7280',
-    marginBottom: 12,
+    color: colors.textSecondary,
+    marginBottom: spacing.md,
     lineHeight: 20,
   },
   footer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: spacing.md,
   },
   infoItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: spacing.xs,
   },
   infoLabel: {
     fontSize: 12,
   },
   infoText: {
     fontSize: 13,
-    color: '#6b7280',
+    color: colors.textSecondary,
   },
 });

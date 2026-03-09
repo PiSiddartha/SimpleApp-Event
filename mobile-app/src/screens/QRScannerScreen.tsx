@@ -10,8 +10,8 @@ import {
   Vibration 
 } from 'react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import * as BarcodeScanner from 'expo-barcode-scanner';
 import { api } from '@/services/api';
+import { colors, spacing } from '@/theme/colors';
 
 interface QRScannerScreenProps {
   onScanSuccess: (eventId: string) => void;
@@ -71,7 +71,8 @@ export function QRScannerScreen({ onScanSuccess, onBack }: QRScannerScreenProps)
     } catch (error: any) {
       console.error('Join error:', error);
       
-      if (error.response?.data?.message?.includes('already joined')) {
+      const msg = error.response?.data?.message ?? '';
+      if (msg.includes('already joined') || msg.includes('already checked into')) {
         Alert.alert(
           'Already Joined',
           'You are already attending this event',
@@ -197,38 +198,38 @@ const styles = StyleSheet.create({
   },
   backText: {
     fontSize: 16,
-    color: '#0ea5e9',
+    color: colors.primary,
     fontWeight: '500',
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#fff',
+    color: colors.white,
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: colors.textMuted,
   },
   icon: {
     fontSize: 64,
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   message: {
     fontSize: 16,
-    color: '#fff',
+    color: colors.white,
     textAlign: 'center',
     marginBottom: 24,
   },
   permissionButton: {
-    backgroundColor: '#0ea5e9',
-    paddingHorizontal: 24,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.xxl,
     paddingVertical: 14,
     borderRadius: 10,
-    marginBottom: 16,
+    marginBottom: spacing.lg,
   },
   permissionButtonText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -236,7 +237,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   backLinkText: {
-    color: '#9ca3af',
+    color: colors.textMuted,
     fontSize: 15,
   },
   cameraContainer: {
@@ -261,7 +262,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     width: 40,
     height: 40,
-    borderColor: '#0ea5e9',
+    borderColor: colors.primary,
   },
   topLeft: {
     top: 0,
@@ -299,7 +300,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   rescanText: {
-    color: '#fff',
+    color: colors.white,
     fontSize: 16,
     fontWeight: '600',
     backgroundColor: 'rgba(14, 165, 233, 0.9)',
@@ -312,7 +313,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
   },
   helpText: {
-    color: '#6b7280',
+    color: colors.textSecondary,
     fontSize: 14,
     textAlign: 'center',
   },

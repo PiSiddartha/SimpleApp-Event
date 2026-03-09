@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "PiResearch Labs",
-    "slug": "payintelli-mobile",
+    "slug": "piresearch-labs-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -16,14 +16,14 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.payintelli.mobile"
+      "bundleIdentifier": "com.piresearchlabs.mobile"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0ea5e9"
       },
-      "package": "com.payintelli.mobile",
+      "package": "com.piresearchlabs.mobile",
       "permissions": [
         "CAMERA"
       ]

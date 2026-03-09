@@ -24,12 +24,20 @@ class ApiService {
       return config;
     });
 
-    // Handle auth errors
+    // Handle auth errors: clear storage and notify so navigator shows login
     this.client.interceptors.response.use(
       (response) => response,
-      (error: AxiosError) => {
-        if (error.response?.status === 401) {
-          // Token will be cleared by auth service
+      async (error: AxiosError) => {
+        const status = error.response?.status;
+        if (status === 401) {
+          await authService.clearStorage();
+        }
+        if (status === 403) {
+          const data = error.response?.data as { error?: string; message?: string } | undefined;
+          const message = `${data?.error ?? ''} ${data?.message ?? ''}`.toLowerCase();
+          if (message.includes('required role') || message.includes('forbidden')) {
+            await authService.clearStorage();
+          }
         }
         return Promise.reject(error);
       }
@@ -39,7 +47,8 @@ class ApiService {
   // Events
   async getEvents() {
     const response = await this.client.get('/events');
-    return response.data;
+    const raw = response.data;
+    return Array.isArray(raw) ? raw : raw?.data ?? raw?.events ?? [];
   }
 
   async getEvent(id: string) {
@@ -56,7 +65,8 @@ class ApiService {
   // Polls
   async getPolls(eventId: string) {
     const response = await this.client.get('/polls', { params: { event_id: eventId } });
-    return response.data;
+    const raw = response.data;
+    return Array.isArray(raw) ? raw : raw?.polls ?? raw?.data ?? [];
   }
 
   async getPoll(id: string) {
@@ -71,13 +81,18 @@ class ApiService {
 
   async getPollResults(id: string) {
     const response = await this.client.get(`/polls/${id}/results`);
-    return response.data;
+    const raw = response.data;
+    return {
+      ...raw,
+      results: Array.isArray(raw?.results) ? raw.results : [],
+    };
   }
 
   // Materials
   async getMaterials(eventId: string) {
     const response = await this.client.get('/materials', { params: { event_id: eventId } });
-    return response.data;
+    const raw = response.data;
+    return Array.isArray(raw) ? raw : raw?.materials ?? raw?.data ?? [];
   }
 
   async getDownloadUrl(materialId: string) {

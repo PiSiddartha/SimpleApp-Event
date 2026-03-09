@@ -12,6 +12,8 @@ import {
 } from 'react-native';
 import { usePoll, usePollResults, useCastVote } from '@/hooks/usePolls';
 import { api } from '@/services/api';
+import { PollOption } from '@/types/poll';
+import { colors, spacing, borderRadius } from '@/theme/colors';
 
 interface PollScreenProps {
   pollId: string;
@@ -41,7 +43,7 @@ export function PollScreen({ pollId, onBack }: PollScreenProps) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0ea5e9" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       </SafeAreaView>
     );
@@ -57,7 +59,7 @@ export function PollScreen({ pollId, onBack }: PollScreenProps) {
     );
   }
 
-  const totalVotes = results?.results?.reduce((sum, r) => sum + r.votes, 0) || 0;
+  const totalVotes = results?.results?.reduce((sum: number, r: { option: string; votes: number }) => sum + r.votes, 0) || 0;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -84,7 +86,7 @@ export function PollScreen({ pollId, onBack }: PollScreenProps) {
         {poll.status === 'active' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Cast Your Vote</Text>
-            {poll.options?.map((option) => (
+            {poll.options?.map((option: PollOption) => (
               <TouchableOpacity
                 key={option.id}
                 style={styles.optionButton}
@@ -103,7 +105,7 @@ export function PollScreen({ pollId, onBack }: PollScreenProps) {
             📊 Results ({totalVotes} votes)
           </Text>
           
-          {results?.results?.map((result, index) => {
+          {results?.results?.map((result: { option: string; votes: number }, index: number) => {
             const percentage = totalVotes > 0 
               ? Math.round((result.votes / totalVotes) * 100) 
               : 0;
@@ -133,7 +135,7 @@ export function PollScreen({ pollId, onBack }: PollScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.background,
   },
   loadingContainer: {
     flex: 1,
@@ -146,18 +148,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorText: {
-    color: '#dc2626',
+    color: colors.error,
     fontSize: 16,
   },
   header: {
-    padding: 20,
+    padding: spacing.xl,
   },
   backButton: {
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   backText: {
     fontSize: 16,
-    color: '#0ea5e9',
+    color: colors.primary,
     fontWeight: '500',
   },
   question: {
@@ -220,13 +222,13 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 8,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: colors.border,
     borderRadius: 4,
     overflow: 'hidden',
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#0ea5e9',
+    backgroundColor: colors.primary,
     borderRadius: 4,
   },
 });

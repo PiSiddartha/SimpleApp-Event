@@ -15,6 +15,7 @@ import { useMaterials } from '@/hooks/useMaterials';
 import { MaterialItem } from '@/components/MaterialItem';
 import { Material } from '@/types/material';
 import { api } from '@/services/api';
+import { colors, spacing } from '@/theme/colors';
 
 interface MaterialsScreenProps {
   eventId: string;
@@ -25,7 +26,9 @@ export function MaterialsScreen({ eventId, onBack }: MaterialsScreenProps) {
   const { data: materialsData, isLoading, refetch } = useMaterials(eventId);
   const [downloading, setDownloading] = React.useState<string | null>(null);
 
-  const materials = materialsData?.materials || materialsData || [];
+  const materials = Array.isArray(materialsData)
+    ? materialsData
+    : (materialsData?.materials ?? []);
 
   const handleDownload = async (material: Material) => {
     setDownloading(material.id);
@@ -69,7 +72,7 @@ export function MaterialsScreen({ eventId, onBack }: MaterialsScreenProps) {
 
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0ea5e9" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading materials...</Text>
         </View>
       ) : (
@@ -97,42 +100,42 @@ export function MaterialsScreen({ eventId, onBack }: MaterialsScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.background,
   },
   header: {
-    padding: 20,
-    paddingBottom: 8,
+    padding: spacing.xl,
+    paddingBottom: spacing.sm,
   },
   backButton: {
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   backText: {
     fontSize: 16,
-    color: '#0ea5e9',
+    color: colors.primary,
     fontWeight: '500',
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#111',
-    marginBottom: 4,
+    color: colors.text,
+    marginBottom: spacing.xs,
   },
   subtitle: {
     fontSize: 14,
-    color: '#6b7280',
+    color: colors.textSecondary,
   },
   list: {
-    padding: 20,
-    paddingTop: 8,
+    padding: spacing.xl,
+    paddingTop: spacing.sm,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
+    gap: spacing.md,
   },
   loadingText: {
-    color: '#6b7280',
+    color: colors.textSecondary,
     fontSize: 15,
   },
   emptyContainer: {
@@ -143,17 +146,17 @@ const styles = StyleSheet.create({
   },
   emptyIcon: {
     fontSize: 48,
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
     color: '#374151',
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: colors.textMuted,
     textAlign: 'center',
   },
 });

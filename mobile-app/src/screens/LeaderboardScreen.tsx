@@ -10,6 +10,7 @@ import {
   ActivityIndicator 
 } from 'react-native';
 import { useEventAnalytics } from '@/hooks/useEvents';
+import { colors, spacing } from '@/theme/colors';
 
 interface LeaderboardScreenProps {
   eventId: string;
@@ -52,15 +53,17 @@ export function LeaderboardScreen({ eventId, onBack }: LeaderboardScreenProps) {
         
         <View style={styles.studentInfo}>
           <Text style={styles.studentId}>
-            {item.user_id.slice(0, 8)}...{item.user_id.slice(-4)}
+            {item?.user_id
+              ? `${item.user_id.slice(0, 8)}...${item.user_id.slice(-4)}`
+              : '—'}
           </Text>
           <Text style={styles.studentActions}>
-            {item.total_actions} actions
+            {item?.total_actions ?? 0} actions
           </Text>
         </View>
         
         <View style={styles.scoreContainer}>
-          <Text style={styles.score}>{item.score}</Text>
+          <Text style={styles.score}>{item?.score ?? 0}</Text>
           <Text style={styles.scoreLabel}>pts</Text>
         </View>
       </View>
@@ -100,7 +103,7 @@ export function LeaderboardScreen({ eventId, onBack }: LeaderboardScreenProps) {
 
       {isLoading ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0ea5e9" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>Loading leaderboard...</Text>
         </View>
       ) : error ? (
@@ -111,7 +114,7 @@ export function LeaderboardScreen({ eventId, onBack }: LeaderboardScreenProps) {
         <FlatList
           data={topStudents}
           renderItem={renderStudent}
-          keyExtractor={(item) => item.user_id}
+          keyExtractor={(item, index) => item?.user_id ?? `student-${index}`}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
@@ -132,38 +135,38 @@ export function LeaderboardScreen({ eventId, onBack }: LeaderboardScreenProps) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: colors.background,
   },
   header: {
-    padding: 20,
-    paddingBottom: 8,
+    padding: spacing.xl,
+    paddingBottom: spacing.sm,
   },
   backButton: {
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   backText: {
     fontSize: 16,
-    color: '#0ea5e9',
+    color: colors.primary,
     fontWeight: '500',
   },
   title: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#111',
-    marginBottom: 4,
+    color: colors.text,
+    marginBottom: spacing.xs,
   },
   subtitle: {
     fontSize: 14,
-    color: '#6b7280',
+    color: colors.textSecondary,
   },
   statsContainer: {
     flexDirection: 'row',
-    marginHorizontal: 20,
-    marginBottom: 16,
-    backgroundColor: '#fff',
+    marginHorizontal: spacing.xl,
+    marginBottom: spacing.lg,
+    backgroundColor: colors.backgroundCard,
     borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
+    padding: spacing.lg,
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -175,30 +178,30 @@ const styles = StyleSheet.create({
   },
   statDivider: {
     width: 1,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: colors.border,
   },
   statValue: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#0ea5e9',
+    color: colors.primary,
   },
   statLabel: {
     fontSize: 12,
-    color: '#6b7280',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   list: {
-    padding: 20,
+    padding: spacing.xl,
     paddingTop: 0,
   },
   studentRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.backgroundCard,
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
-    shadowColor: '#000',
+    shadowColor: colors.black,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.03,
     shadowRadius: 4,
@@ -210,7 +213,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: spacing.md,
   },
   rankText: {
     fontSize: 16,
@@ -222,11 +225,11 @@ const styles = StyleSheet.create({
   studentId: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#111',
+    color: colors.text,
   },
   studentActions: {
     fontSize: 13,
-    color: '#6b7280',
+    color: colors.textSecondary,
     marginTop: 2,
   },
   scoreContainer: {
@@ -235,20 +238,20 @@ const styles = StyleSheet.create({
   score: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#0ea5e9',
+    color: colors.primary,
   },
   scoreLabel: {
     fontSize: 11,
-    color: '#9ca3af',
+    color: colors.textMuted,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
+    gap: spacing.md,
   },
   loadingText: {
-    color: '#6b7280',
+    color: colors.textSecondary,
     fontSize: 15,
   },
   errorContainer: {
@@ -257,7 +260,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorText: {
-    color: '#dc2626',
+    color: colors.error,
     fontSize: 15,
   },
   emptyContainer: {
@@ -268,17 +271,17 @@ const styles = StyleSheet.create({
   },
   emptyIcon: {
     fontSize: 48,
-    marginBottom: 12,
+    marginBottom: spacing.md,
   },
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
     color: '#374151',
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#9ca3af',
+    color: colors.textMuted,
     textAlign: 'center',
   },
 });
