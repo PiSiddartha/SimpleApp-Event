@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "PayIntelli",
+    "name": "PiResearch Labs",
     "slug": "payintelli-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -35,7 +35,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow PayIntelli to access your camera to scan QR codes"
+          "cameraPermission": "Allow PiResearch Labs to access your camera to scan QR codes"
         }
       ]
     ]

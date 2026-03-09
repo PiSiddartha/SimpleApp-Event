@@ -10,14 +10,14 @@ import { Modal } from '@/components/Modal';
 export default function PollsPage() {
   const { data: events } = useEvents();
   const [selectedEvent, setSelectedEvent] = useState<string>('');
-  const { data: pollsData, isLoading } = usePolls(selectedEvent || undefined);
-  const polls = pollsData?.polls || pollsData || [];
+  const { data: polls = [], isLoading } = usePolls(selectedEvent || undefined);
   const [showModal, setShowModal] = useState(false);
   const [selectedPoll, setSelectedPoll] = useState<string | null>(null);
 
   const { data: pollResults } = usePollResults(selectedPoll || '');
 
-  const totalVotes = pollResults?.results?.reduce((sum: number, r: any) => sum + r.votes, 0) ?? 0;
+  const results = Array.isArray(pollResults?.results) ? pollResults.results : [];
+  const totalVotes = results.reduce((sum: number, r: any) => sum + r.votes, 0);
 
   return (
     <div className="space-y-6">
@@ -136,8 +136,8 @@ export default function PollsPage() {
               Total votes: <span className="font-medium text-gray-700">{totalVotes}</span>
             </p>
             <div className="space-y-4">
-              {pollResults.results.map((result: any, index: number) => {
-                const total = pollResults.results.reduce((sum: number, r: any) => sum + r.votes, 0);
+              {results.map((result: any, index: number) => {
+                const total = results.reduce((sum: number, r: any) => sum + r.votes, 0);
                 const percentage = total > 0 ? Math.round((result.votes / total) * 100) : 0;
                 return (
                   <div key={index}>

@@ -7,7 +7,9 @@ import {
   Calendar, 
   Vote, 
   FileText, 
-  BarChart3 
+  BarChart3,
+  UserCog,
+  Users
 } from 'lucide-react';
 
 const menuItems = [
@@ -16,6 +18,8 @@ const menuItems = [
   { href: '/dashboard/polls', label: 'Polls', icon: Vote },
   { href: '/dashboard/materials', label: 'Materials', icon: FileText },
   { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
+  { href: '/dashboard/admin-users', label: 'Admin Users', icon: UserCog },
+  { href: '/dashboard/users', label: 'Users', icon: Users },
 ];
 
 export function Sidebar() {

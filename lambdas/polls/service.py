@@ -34,7 +34,7 @@ class PollService:
         event_id: str,
         question: str,
         options: List[str],
-        created_by: str,
+        created_by: Optional[str] = None,
     ) -> Optional[Dict[str, Any]]:
         """
         Create a new poll with options.

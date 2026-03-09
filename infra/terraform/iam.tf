@@ -140,7 +140,12 @@ resource "aws_iam_policy" "lambda_cognito" {
         Effect = "Allow"
         Action = [
           "cognito-idp:DescribeUserPool",
-          "cognito-idp:DescribeUserPoolClient"
+          "cognito-idp:DescribeUserPoolClient",
+          "cognito-idp:ListUsers",
+          "cognito-idp:ListUsersInGroup",
+          "cognito-idp:AdminListGroupsForUser",
+          "cognito-idp:AdminCreateUser",
+          "cognito-idp:AdminAddUserToGroup"
         ]
         Resource = aws_cognito_user_pool.main.arn
       }

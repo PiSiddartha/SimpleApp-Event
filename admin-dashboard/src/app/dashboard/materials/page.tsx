@@ -2,15 +2,39 @@
 
 import { useState } from 'react';
 import { useEvents } from '@/hooks/useEvents';
-import { useMaterials, useDeleteMaterial, useDownloadUrl } from '@/hooks/useMaterials';
+import { useMaterials, useDeleteMaterial } from '@/hooks/useMaterials';
 import { MaterialUploader, MaterialListItem } from '@/components/MaterialUploader';
 import { Loader2, FileText } from 'lucide-react';
+import { api } from '@/services/api';
 
 export default function MaterialsPage() {
   const { data: events } = useEvents();
   const [selectedEvent, setSelectedEvent] = useState<string>('');
   const { data: materials, isLoading, refetch } = useMaterials(selectedEvent);
   const deleteMaterial = useDeleteMaterial();
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+
+  const handleDownload = async (material: { id: string; file_url: string }) => {
+    const popup = window.open('', '_blank');
+    setDownloadingId(material.id);
+    try {
+      const result = await api.getDownloadUrl(material.id);
+      const downloadUrl = result?.download_url || material.file_url;
+      if (popup) {
+        popup.location.replace(downloadUrl);
+      } else {
+        window.location.href = downloadUrl;
+      }
+    } catch {
+      if (popup) {
+        popup.location.replace(material.file_url);
+      } else {
+        window.location.href = material.file_url;
+      }
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -63,8 +87,9 @@ export default function MaterialsPage() {
                     <MaterialListItem
                       key={material.id}
                       material={material}
-                      onDownload={() => window.open(material.file_url, '_blank')}
+                      onDownload={() => handleDownload(material)}
                       onDelete={() => deleteMaterial.mutate(material.id)}
+                      isDownloading={downloadingId === material.id}
                     />
                   ))}
                   {(!materials?.materials || materials.materials.length === 0) && (

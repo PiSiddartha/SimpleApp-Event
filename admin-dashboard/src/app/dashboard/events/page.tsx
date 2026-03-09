@@ -1,17 +1,22 @@
 'use client';
 
 import { useState } from 'react';
-import { useEvents, useCreateEvent, useDeleteEvent } from '@/hooks/useEvents';
+import { useEvents, useCreateEvent } from '@/hooks/useEvents';
 import { EventCard } from '@/components/EventCard';
 import { Plus, Loader2, Calendar, QrCode, Users } from 'lucide-react';
 import { Modal } from '@/components/Modal';
 import { CreateEventInput } from '@/types/event';
+import QRCode from 'qrcode';
 
 export default function EventsPage() {
   const { data: events, isLoading } = useEvents();
   const createEvent = useCreateEvent();
-  const deleteEvent = useDeleteEvent();
   const [showModal, setShowModal] = useState(false);
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [qrDataUrl, setQrDataUrl] = useState('');
+  const [qrPayload, setQrPayload] = useState('');
+  const [qrEventName, setQrEventName] = useState('');
+  const [submitError, setSubmitError] = useState<string>('');
   const [formData, setFormData] = useState<CreateEventInput>({
     name: '',
     description: '',
@@ -24,9 +29,46 @@ export default function EventsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await createEvent.mutateAsync(formData);
-    setShowModal(false);
-    resetForm();
+    setSubmitError('');
+
+    if (formData.start_time && formData.end_time && formData.end_time < formData.start_time) {
+      setSubmitError('End time must be after start time.');
+      return;
+    }
+
+    try {
+      await createEvent.mutateAsync({
+        ...formData,
+        start_time: formData.start_time || undefined,
+        end_time: formData.end_time || undefined,
+        description: formData.description?.trim() || undefined,
+        location: formData.location?.trim() || undefined,
+        max_attendees: formData.max_attendees ? Math.max(1, formData.max_attendees) : undefined,
+      });
+      setShowModal(false);
+      resetForm();
+    } catch (error: any) {
+      const message = error?.response?.data?.message || error?.message || 'Failed to create event';
+      setSubmitError(message);
+    }
+  };
+
+  const handleQRClick = async (eventItem: any) => {
+    const payload = eventItem?.id || eventItem?.qr_code;
+    if (!payload) return;
+
+    try {
+      const dataUrl = await QRCode.toDataURL(payload, {
+        width: 320,
+        margin: 1,
+      });
+      setQrPayload(payload);
+      setQrEventName(eventItem?.name || 'Event');
+      setQrDataUrl(dataUrl);
+      setShowQRModal(true);
+    } catch (error) {
+      setSubmitError('Unable to generate QR code. Please try again.');
+    }
   };
 
   const resetForm = () => {
@@ -67,7 +109,7 @@ export default function EventsPage() {
             <EventCard
               key={event.id}
               event={event}
-              onQRClick={() => console.log('QR for', event.id)}
+              onQRClick={() => handleQRClick(event)}
             />
           ))}
         </div>
@@ -153,7 +195,7 @@ export default function EventsPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1.5">Event Type</label>
                   <select
                     value={formData.event_type}
-                    onChange={(e) => setFormData({ ...formData, event_type: e.target.value as any })}
+                    onChange={(e) => setFormData({ ...formData, event_type: e.target.value as CreateEventInput['event_type'] })}
                     className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                   >
                     <option value="offline">Offline</option>
@@ -189,11 +231,20 @@ export default function EventsPage() {
                 <input
                   type="number"
                   value={formData.max_attendees ?? ''}
-                  onChange={(e) => setFormData({ ...formData, max_attendees: parseInt(e.target.value) || 0 })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      max_attendees: e.target.value === '' ? undefined : Math.max(1, parseInt(e.target.value, 10) || 1),
+                    })
+                  }
                   className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 max-w-[180px]"
                   min={1}
                 />
               </div>
+
+              {submitError && (
+                <p className="text-sm text-red-600">{submitError}</p>
+              )}
 
               <div className="flex gap-3 pt-2">
                 <button
@@ -213,6 +264,55 @@ export default function EventsPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </Modal>
+      )}
+
+      {showQRModal && (
+        <Modal onClose={() => setShowQRModal(false)}>
+          <div className="p-6 sm:p-8">
+            <h2 className="text-xl font-bold text-gray-900 mb-1">Event QR Code</h2>
+            <p className="text-sm text-gray-500 mb-6">
+              Scan this code from the student app to join {qrEventName}.
+            </p>
+
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 sm:p-6">
+              {qrDataUrl && (
+                <img
+                  src={qrDataUrl}
+                  alt={`QR code for ${qrEventName}`}
+                  className="mx-auto h-64 w-64"
+                />
+              )}
+            </div>
+
+            <div className="mt-4 rounded-lg border border-gray-200 bg-white p-3">
+              <p className="text-xs font-medium text-gray-500">QR Payload</p>
+              <p className="mt-1 break-all text-sm text-gray-800">{qrPayload}</p>
+            </div>
+
+            <div className="mt-4 flex gap-3">
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(qrPayload);
+                  } catch {
+                    // Ignore clipboard failures in unsupported contexts.
+                  }
+                }}
+                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+              >
+                Copy Event ID
+              </button>
+              <a
+                href={qrDataUrl}
+                download={`event-${qrPayload}.png`}
+                className="flex-1 text-center px-4 py-2.5 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition-colors"
+              >
+                Download QR
+              </a>
+            </div>
           </div>
         </Modal>
       )}

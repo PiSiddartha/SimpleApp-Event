@@ -6,6 +6,8 @@ Data access for engagement events.
 import logging
 from typing import Dict, Any, List, Optional
 
+from psycopg2.extras import Json
+
 from shared.db import execute_query
 from shared.engagement.models import EngagementEvent, EngagementActionType
 
@@ -46,7 +48,7 @@ class EngagementRepository:
                 user_id,
                 event_id,
                 action_type,
-                metadata if metadata else {},
+                Json(metadata if metadata else {}),
                 datetime.utcnow(),
             ),
             fetch="none"

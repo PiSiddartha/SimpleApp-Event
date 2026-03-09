@@ -6,7 +6,7 @@ import { CreatePollInput, PollResults } from '@/types/poll';
 export function usePolls(eventId?: string) {
   return useQuery({
     queryKey: ['polls', eventId],
-    queryFn: () => api.getPolls(eventId!),
+    queryFn: () => api.getPolls(eventId),
     enabled: !!eventId,
   });
 }

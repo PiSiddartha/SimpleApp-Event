@@ -11,6 +11,10 @@ from shared.auth import require_auth, require_role, create_response, create_erro
 
 logger = logging.getLogger(__name__)
 
+def _extract_material_id(path: str) -> str:
+    parts = path.split("/")
+    return parts[2] if len(parts) >= 3 else ""
+
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Main Lambda handler for materials."""
@@ -30,19 +34,17 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         if path.startswith("/materials/"):
             parts = path.split("/")
             if len(parts) >= 3:
-                material_id = parts[2]
-                
                 # GET /materials/{material_id}
                 if method == "GET":
-                    return get_material(material_id, event, context)
+                    return get_material(event, context)
                 
                 # DELETE /materials/{material_id}
                 if method == "DELETE":
-                    return delete_material(material_id, event, context)
+                    return delete_material(event, context)
                 
                 # POST /materials/{material_id}/download
                 if len(parts) >= 4 and parts[3] == "download" and method == "POST":
-                    return get_download_url(material_id, event, context)
+                    return get_download_url(event, context)
         
         return create_error_response(404, "Endpoint not found")
         
@@ -60,15 +62,13 @@ def create_material(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     from materials.service import MaterialService
     
     body = json.loads(event.get("body", "{}"))
-    user = event.get("user", {})
-    user_id = user.get("sub") or user.get("cognito:username")
     
     service = MaterialService()
     result = service.create_material(
         event_id=body.get("event_id"),
         title=body.get("title"),
         file_type=body.get("file_type"),
-        uploaded_by=user_id,
+        uploaded_by=None,
     )
     
     if not result:
@@ -77,9 +77,13 @@ def create_material(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     return create_response(201, result)
 
 
-def get_material(material_id: str, event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def get_material(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Get material details."""
     from materials.service import MaterialService
+
+    material_id = _extract_material_id(event.get("path", ""))
+    if not material_id:
+        return create_error_response(400, "material_id is required")
     
     service = MaterialService()
     result = service.get_material(material_id)
@@ -91,15 +95,22 @@ def get_material(material_id: str, event: Dict[str, Any], context: Any) -> Dict[
 
 
 @require_role("admin")
-def delete_material(material_id: str, event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def delete_material(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Delete a material."""
     from materials.service import MaterialService
+
+    logger.info("delete_material handler started")
+    material_id = _extract_material_id(event.get("path", ""))
+    if not material_id:
+        return create_error_response(400, "material_id is required")
     
     user = event.get("user", {})
     user_id = user.get("sub") or user.get("cognito:username")
     
     service = MaterialService()
+    logger.info("delete_material calling service.delete_material for %s", material_id)
     success = service.delete_material(material_id, user_id)
+    logger.info("delete_material service returned success=%s", success)
     
     if not success:
         return create_error_response(404, "Material not found")
@@ -127,12 +138,16 @@ def list_materials(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
 
 @require_auth
-def get_download_url(material_id: str, event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def get_download_url(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Get presigned download URL for a material.
     POST /materials/{material_id}/download
     """
     from materials.service import MaterialService
+
+    material_id = _extract_material_id(event.get("path", ""))
+    if not material_id:
+        return create_error_response(400, "material_id is required")
     
     user = event.get("user", {})
     user_id = user.get("sub") or user.get("cognito:username")

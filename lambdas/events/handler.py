@@ -11,6 +11,10 @@ from shared.auth import require_auth, require_role, create_response, create_erro
 
 logger = logging.getLogger(__name__)
 
+def _extract_event_id(path: str) -> str:
+    parts = path.split("/")
+    return parts[2] if len(parts) >= 3 else ""
+
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
@@ -32,14 +36,12 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         elif path.startswith("/events/"):
             parts = path.split("/")
             if len(parts) >= 3:
-                event_id = parts[2]
-                
                 if method == "GET":
-                    return get_event(event_id, event, context)
+                    return get_event(event, context)
                 elif method == "PUT":
-                    return update_event(event_id, event, context)
+                    return update_event(event, context)
                 elif method == "DELETE":
-                    return delete_event(event_id, event, context)
+                    return delete_event(event, context)
         
         return create_error_response(404, "Endpoint not found")
         
@@ -57,10 +59,6 @@ def create_event(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     from events.service import EventService
     
     body = json.loads(event.get("body", "{}"))
-    user = event.get("user", {})
-    
-    # Get user ID from Cognito claims
-    user_id = user.get("sub") or user.get("cognito:username")
     
     service = EventService()
     result = service.create_event(
@@ -71,7 +69,7 @@ def create_event(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         start_time=body.get("start_time"),
         end_time=body.get("end_time"),
         max_attendees=body.get("max_attendees"),
-        created_by=user_id,
+        created_by=None,
     )
     
     # Format response with event_id and qr_url
@@ -84,20 +82,21 @@ def create_event(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     return create_response(201, response)
 
 
-@require_role("admin", "organizer")
-def update_event(event_id: str, event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+@require_role("admin")
+def update_event(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Update an existing event."""
     from events.service import EventService
+
+    event_id = _extract_event_id(event.get("path", ""))
+    if not event_id:
+        return create_error_response(400, "event_id is required")
     
     body = json.loads(event.get("body", "{}"))
-    user = event.get("user", {})
-    
-    user_id = user.get("sub") or user.get("cognito:username")
     
     service = EventService()
     result = service.update_event(
         event_id=event_id,
-        user_id=user_id,
+        user_id="",
         **body
     )
     
@@ -107,16 +106,17 @@ def update_event(event_id: str, event: Dict[str, Any], context: Any) -> Dict[str
     return create_response(200, result)
 
 
-@require_role("admin", "organizer")
-def delete_event(event_id: str, event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+@require_role("admin")
+def delete_event(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Delete an event."""
     from events.service import EventService
-    
-    user = event.get("user", {})
-    user_id = user.get("sub") or user.get("cognito:username")
+
+    event_id = _extract_event_id(event.get("path", ""))
+    if not event_id:
+        return create_error_response(400, "event_id is required")
     
     service = EventService()
-    success = service.delete_event(event_id, user_id)
+    success = service.delete_event(event_id, "")
     
     if not success:
         return create_error_response(404, "Event not found")
@@ -124,9 +124,13 @@ def delete_event(event_id: str, event: Dict[str, Any], context: Any) -> Dict[str
     return create_response(204, {"message": "Event deleted"})
 
 
-def get_event(event_id: str, event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def get_event(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Get event by ID."""
     from events.service import EventService
+
+    event_id = _extract_event_id(event.get("path", ""))
+    if not event_id:
+        return create_error_response(400, "event_id is required")
     
     service = EventService()
     result = service.get_event(event_id)

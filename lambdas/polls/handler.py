@@ -11,6 +11,10 @@ from shared.auth import require_auth, require_role, create_response, create_erro
 
 logger = logging.getLogger(__name__)
 
+def _extract_poll_id(path: str) -> str:
+    parts = path.split("/")
+    return parts[2] if len(parts) >= 3 else ""
+
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Main Lambda handler for polls."""
@@ -27,27 +31,26 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         if path.startswith("/polls/"):
             parts = path.split("/")
             if len(parts) >= 3:
-                poll_id = parts[2]
                 
                 # POST /polls/{poll_id}/vote
                 if len(parts) >= 4 and parts[3] == "vote" and method == "POST":
-                    return cast_vote(poll_id, event, context)
+                    return cast_vote(event, context)
                 
                 # GET /polls/{poll_id}/results
                 if len(parts) >= 4 and parts[3] == "results" and method == "GET":
-                    return get_poll_results(poll_id, event, context)
+                    return get_poll_results(event, context)
                 
                 # GET /polls/{poll_id}
                 if method == "GET":
-                    return get_poll(poll_id, event, context)
+                    return get_poll(event, context)
                 
                 # PUT /polls/{poll_id} - update/close poll
                 if method == "PUT":
-                    return update_poll(poll_id, event, context)
+                    return update_poll(event, context)
                 
                 # DELETE /polls/{poll_id}
                 if method == "DELETE":
-                    return delete_poll(poll_id, event, context)
+                    return delete_poll(event, context)
         
         # Route: GET /polls?event_id=xxx
         if path == "/polls" and method == "GET":
@@ -69,15 +72,13 @@ def create_poll(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     from polls.service import PollService
     
     body = json.loads(event.get("body", "{}"))
-    user = event.get("user", {})
-    user_id = user.get("sub") or user.get("cognito:username")
     
     service = PollService()
     result = service.create_poll(
         event_id=body.get("event_id"),
         question=body.get("question"),
         options=body.get("options", []),
-        created_by=user_id,
+        created_by=None,
     )
     
     if not result:
@@ -90,10 +91,14 @@ def create_poll(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
 
 @require_role("admin")
-def update_poll(poll_id: str, event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def update_poll(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Update a poll (close, reopen, etc.)."""
     from polls.service import PollService
     
+    poll_id = _extract_poll_id(event.get("path", ""))
+    if not poll_id:
+        return create_error_response(400, "poll_id is required")
+
     body = json.loads(event.get("body", "{}"))
     user = event.get("user", {})
     user_id = user.get("sub") or user.get("cognito:username")
@@ -112,10 +117,14 @@ def update_poll(poll_id: str, event: Dict[str, Any], context: Any) -> Dict[str, 
 
 
 @require_role("admin")
-def delete_poll(poll_id: str, event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def delete_poll(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Delete a poll."""
     from polls.service import PollService
     
+    poll_id = _extract_poll_id(event.get("path", ""))
+    if not poll_id:
+        return create_error_response(400, "poll_id is required")
+
     user = event.get("user", {})
     user_id = user.get("sub") or user.get("cognito:username")
     
@@ -129,10 +138,14 @@ def delete_poll(poll_id: str, event: Dict[str, Any], context: Any) -> Dict[str, 
 
 
 @require_auth
-def get_poll(poll_id: str, event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def get_poll(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Get poll by ID."""
     from polls.service import PollService
     
+    poll_id = _extract_poll_id(event.get("path", ""))
+    if not poll_id:
+        return create_error_response(400, "poll_id is required")
+
     service = PollService()
     result = service.get_poll(poll_id)
     
@@ -143,12 +156,16 @@ def get_poll(poll_id: str, event: Dict[str, Any], context: Any) -> Dict[str, Any
 
 
 @require_auth
-def get_poll_results(poll_id: str, event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def get_poll_results(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Get poll results.
     GET /polls/{poll_id}/results
     """
     from polls.service import PollService
+
+    poll_id = _extract_poll_id(event.get("path", ""))
+    if not poll_id:
+        return create_error_response(400, "poll_id is required")
     
     service = PollService()
     result = service.get_results(poll_id)
@@ -176,13 +193,17 @@ def list_polls(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
 
 @require_auth
-def cast_vote(poll_id: str, event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def cast_vote(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Cast a vote on a poll.
     POST /polls/{poll_id}/vote
     """
     from polls.service import PollService
     
+    poll_id = _extract_poll_id(event.get("path", ""))
+    if not poll_id:
+        return create_error_response(400, "poll_id is required")
+
     body = json.loads(event.get("body", "{}"))
     user = event.get("user", {})
     user_id = user.get("sub") or user.get("cognito:username")

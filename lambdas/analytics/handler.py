@@ -11,6 +11,14 @@ from shared.auth import require_role, create_response, create_error_response
 
 logger = logging.getLogger(__name__)
 
+def _extract_event_id_from_path(path: str) -> str:
+    parts = path.split("/")
+    return parts[2] if len(parts) >= 4 and parts[1] == "events" and parts[3] == "analytics" else ""
+
+def _extract_student_id_from_path(path: str) -> str:
+    parts = path.split("/")
+    return parts[3] if len(parts) >= 4 and parts[1] == "analytics" and parts[2] == "student" else ""
+
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Main Lambda handler for analytics."""
@@ -20,12 +28,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         
         # Route: GET /events/{event_id}/analytics
         if "/events/" in path and "/analytics" in path:
-            parts = path.split("/")
-            # /events/{event_id}/analytics
-            if len(parts) >= 4 and parts[3] == "analytics":
-                event_id = parts[2]
-                if method == "GET":
-                    return get_event_analytics(event_id, event, context)
+            if method == "GET":
+                return get_event_analytics(event, context)
         
         # Route: GET /analytics/overview (admin overview)
         if path == "/analytics/overview" or path.startswith("/analytics/overview"):
@@ -34,11 +38,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         
         # Route: GET /analytics/student/{student_id}
         if "/analytics/student/" in path:
-            parts = path.split("/")
-            if len(parts) >= 4:
-                student_id = parts[3]
-                if method == "GET":
-                    return get_student_analytics(student_id, event, context)
+            if method == "GET":
+                return get_student_analytics(event, context)
         
         return create_error_response(404, "Endpoint not found")
         
@@ -47,14 +48,18 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         return create_error_response(500, "Internal server error")
 
 
-@require_role("admin", "organizer")
-def get_event_analytics(event_id: str, event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+@require_role("admin")
+def get_event_analytics(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Get analytics for a specific event.
     GET /events/{event_id}/analytics
     """
     from analytics.service import AnalyticsService
-    
+
+    event_id = _extract_event_id_from_path(event.get("path", ""))
+    if not event_id:
+        return create_error_response(400, "event_id is required")
+
     service = AnalyticsService()
     result = service.get_event_analytics(event_id)
     
@@ -90,13 +95,17 @@ def get_overview(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
 
 @require_role("admin")
-def get_student_analytics(student_id: str, event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def get_student_analytics(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Get analytics for a specific student.
     GET /analytics/student/{student_id}
     """
     from analytics.service import AnalyticsService
-    
+
+    student_id = _extract_student_id_from_path(event.get("path", ""))
+    if not student_id:
+        return create_error_response(400, "student_id is required")
+
     service = AnalyticsService()
     result = service.get_student_analytics(student_id)
     

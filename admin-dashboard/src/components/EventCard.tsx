@@ -66,7 +66,7 @@ export function EventCard({ event, onQRClick, onClick }: EventCardProps) {
         )}
       </div>
       
-      {event.qr_code && onQRClick && (
+      {onQRClick && (
         <button
           onClick={(e) => {
             e.stopPropagation();

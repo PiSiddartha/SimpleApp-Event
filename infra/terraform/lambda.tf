@@ -20,15 +20,15 @@ resource "null_resource" "build_lambdas" {
 locals {
   # AWS_REGION is reserved by Lambda and set automatically; do not add it here.
   lambda_env = {
-    DB_HOST                = aws_db_instance.main.address
-    DB_PORT                = "5432"
-    DB_NAME                = var.db_name
-    DB_USER                = var.db_username
-    DB_PASSWORD            = var.db_password
-    S3_MATERIALS_BUCKET    = aws_s3_bucket.materials.id
-    COGNITO_USER_POOL_ID   = aws_cognito_user_pool.main.id
-    COGNITO_APP_CLIENT_ID  = aws_cognito_user_pool_client.main.id
-    CORS_ORIGIN            = "*"
+    DB_HOST               = aws_db_instance.main.address
+    DB_PORT               = "5432"
+    DB_NAME               = var.db_name
+    DB_USER               = var.db_username
+    DB_PASSWORD           = var.db_password
+    S3_MATERIALS_BUCKET   = aws_s3_bucket.materials.id
+    COGNITO_USER_POOL_ID  = aws_cognito_user_pool.main.id
+    COGNITO_APP_CLIENT_ID = aws_cognito_user_pool_client.main.id
+    CORS_ORIGIN           = "*"
   }
 }
 
@@ -36,11 +36,11 @@ locals {
 resource "aws_lambda_function" "events" {
   filename      = "../../lambdas/events.zip"
   function_name = "${var.project_name}-events"
-  role         = aws_iam_role.lambda_exec.arn
-  runtime      = var.python_runtime
-  handler      = "events.handler.handler"
+  role          = aws_iam_role.lambda_exec.arn
+  runtime       = var.python_runtime
+  handler       = "events.handler.handler"
 
-  timeout   = var.lambda_timeout
+  timeout     = var.lambda_timeout
   memory_size = var.lambda_memory_size
 
   environment {
@@ -66,11 +66,11 @@ resource "aws_lambda_function" "events" {
 resource "aws_lambda_function" "attendance" {
   filename      = "../../lambdas/attendance.zip"
   function_name = "${var.project_name}-attendance"
-  role         = aws_iam_role.lambda_exec.arn
-  runtime      = var.python_runtime
-  handler      = "attendance.handler.handler"
+  role          = aws_iam_role.lambda_exec.arn
+  runtime       = var.python_runtime
+  handler       = "attendance.handler.handler"
 
-  timeout   = var.lambda_timeout
+  timeout     = var.lambda_timeout
   memory_size = var.lambda_memory_size
 
   environment {
@@ -95,11 +95,11 @@ resource "aws_lambda_function" "attendance" {
 resource "aws_lambda_function" "polls" {
   filename      = "../../lambdas/polls.zip"
   function_name = "${var.project_name}-polls"
-  role         = aws_iam_role.lambda_exec.arn
-  runtime      = var.python_runtime
-  handler      = "polls.handler.handler"
+  role          = aws_iam_role.lambda_exec.arn
+  runtime       = var.python_runtime
+  handler       = "polls.handler.handler"
 
-  timeout   = var.lambda_timeout
+  timeout     = var.lambda_timeout
   memory_size = var.lambda_memory_size
 
   environment {
@@ -124,11 +124,11 @@ resource "aws_lambda_function" "polls" {
 resource "aws_lambda_function" "materials" {
   filename      = "../../lambdas/materials.zip"
   function_name = "${var.project_name}-materials"
-  role         = aws_iam_role.lambda_exec.arn
-  runtime      = var.python_runtime
-  handler      = "materials.handler.handler"
+  role          = aws_iam_role.lambda_exec.arn
+  runtime       = var.python_runtime
+  handler       = "materials.handler.handler"
 
-  timeout   = var.lambda_timeout
+  timeout     = var.lambda_timeout
   memory_size = var.lambda_memory_size
 
   environment {
@@ -154,11 +154,11 @@ resource "aws_lambda_function" "materials" {
 resource "aws_lambda_function" "analytics" {
   filename      = "../../lambdas/analytics.zip"
   function_name = "${var.project_name}-analytics"
-  role         = aws_iam_role.lambda_exec.arn
-  runtime      = var.python_runtime
-  handler      = "analytics.handler.handler"
+  role          = aws_iam_role.lambda_exec.arn
+  runtime       = var.python_runtime
+  handler       = "analytics.handler.handler"
 
-  timeout   = var.lambda_timeout
+  timeout     = var.lambda_timeout
   memory_size = var.lambda_memory_size
 
   environment {
@@ -177,6 +177,28 @@ resource "aws_lambda_function" "analytics" {
     subnet_ids         = ["${var.private_subnet_1_id}", "${var.private_subnet_2_id}"]
     security_group_ids = [aws_security_group.lambda.id]
   }
+}
+
+# Users Lambda
+resource "aws_lambda_function" "users" {
+  filename      = "../../lambdas/users.zip"
+  function_name = "${var.project_name}-users"
+  role          = aws_iam_role.lambda_exec.arn
+  runtime       = var.python_runtime
+  handler       = "users.handler.handler"
+
+  timeout     = var.lambda_timeout
+  memory_size = var.lambda_memory_size
+
+  environment {
+    variables = local.lambda_env
+  }
+
+  depends_on = [
+    null_resource.build_lambdas,
+    aws_iam_role_policy_attachment.lambda_basic,
+    aws_iam_role_policy_attachment.lambda_cognito
+  ]
 }
 
 # Lambda Security Group
@@ -199,41 +221,49 @@ resource "aws_security_group" "lambda" {
 
 # Lambda permissions for API Gateway HTTP API
 resource "aws_lambda_permission" "api_events" {
-  statement_id           = "AllowExecutionFromAPIGateway"
-  action                 = "lambda:InvokeFunction"
-  function_name          = aws_lambda_function.events.function_name
-  principal              = "apigateway.amazonaws.com"
-  source_arn             = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.events.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }
 
 resource "aws_lambda_permission" "api_attendance" {
-  statement_id           = "AllowExecutionFromAPIGateway"
-  action                 = "lambda:InvokeFunction"
-  function_name          = aws_lambda_function.attendance.function_name
-  principal              = "apigateway.amazonaws.com"
-  source_arn             = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.attendance.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }
 
 resource "aws_lambda_permission" "api_polls" {
-  statement_id           = "AllowExecutionFromAPIGateway"
-  action                 = "lambda:InvokeFunction"
-  function_name          = aws_lambda_function.polls.function_name
-  principal              = "apigateway.amazonaws.com"
-  source_arn             = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.polls.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }
 
 resource "aws_lambda_permission" "api_materials" {
-  statement_id           = "AllowExecutionFromAPIGateway"
-  action                 = "lambda:InvokeFunction"
-  function_name          = aws_lambda_function.materials.function_name
-  principal              = "apigateway.amazonaws.com"
-  source_arn             = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.materials.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }
 
 resource "aws_lambda_permission" "api_analytics" {
-  statement_id           = "AllowExecutionFromAPIGateway"
-  action                 = "lambda:InvokeFunction"
-  function_name          = aws_lambda_function.analytics.function_name
-  principal              = "apigateway.amazonaws.com"
-  source_arn             = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.analytics.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "api_users" {
+  statement_id  = "AllowExecutionFromAPIGatewayUsers"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.users.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }

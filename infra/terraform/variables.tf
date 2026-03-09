@@ -104,19 +104,19 @@ variable "lambda_build_trigger" {
 variable "vpc_id" {
   description = "VPC ID for Lambda functions"
   type        = string
-  default     = ""  # Set in terraform.tfvars
+  default     = "" # Set in terraform.tfvars
 }
 
 variable "private_subnet_1_id" {
   description = "Private subnet 1 ID"
   type        = string
-  default     = ""  # Set in terraform.tfvars
+  default     = "" # Set in terraform.tfvars
 }
 
 variable "private_subnet_2_id" {
   description = "Private subnet 2 ID"
   type        = string
-  default     = ""  # Set in terraform.tfvars
+  default     = "" # Set in terraform.tfvars
 }
 
 variable "vpc_cidr" {

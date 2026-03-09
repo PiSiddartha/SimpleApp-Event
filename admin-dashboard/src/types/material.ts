@@ -16,6 +16,14 @@ export interface CreateMaterialInput {
   file_type: string;
 }
 
+export interface CreateMaterialResponse {
+  material_id: string;
+  title: string;
+  file_url: string;
+  upload_url: string;
+  message: string;
+}
+
 export interface MaterialDownloadResponse {
   material_id: string;
   title: string;

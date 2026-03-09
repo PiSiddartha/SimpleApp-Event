@@ -36,7 +36,7 @@ resource "aws_s3_bucket_public_access_block" "materials" {
 
   block_public_acls       = true
   block_public_policy     = true
-  ignore_public_acls     = true
+  ignore_public_acls      = true
   restrict_public_buckets = true
 }
 
@@ -75,8 +75,8 @@ resource "aws_s3_bucket_policy" "materials" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid       = "AllowLambdaAccess"
-        Effect    = "Allow"
+        Sid    = "AllowLambdaAccess"
+        Effect = "Allow"
         Principal = {
           AWS = aws_iam_role.lambda_exec.arn
         }
@@ -91,6 +91,19 @@ resource "aws_s3_bucket_policy" "materials" {
       }
     ]
   })
+}
+
+# Allow browser uploads/downloads via presigned URLs from local and deployed web apps.
+resource "aws_s3_bucket_cors_configuration" "materials" {
+  bucket = aws_s3_bucket.materials.id
+
+  cors_rule {
+    allowed_headers = ["*"]
+    allowed_methods = ["GET", "PUT", "POST", "DELETE", "HEAD"]
+    allowed_origins = ["*"]
+    expose_headers  = ["ETag", "x-amz-request-id", "x-amz-id-2"]
+    max_age_seconds = 3000
+  }
 }
 
 # Output bucket name

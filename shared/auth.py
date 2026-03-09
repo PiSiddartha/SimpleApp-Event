@@ -6,7 +6,7 @@ Handles token verification and user extraction from JWT tokens.
 import os
 import json
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Iterable
 from functools import wraps
 
 import jwt
@@ -166,18 +166,69 @@ def require_auth(func):
 
 
 # Cognito group name -> role name. JWT contains cognito:groups (list of group names).
-COGNITO_GROUP_TO_ROLE = {"Admins": "admin", "Organizers": "organizer"}
+# Keep keys lowercase so matching can be case-insensitive.
+COGNITO_GROUP_TO_ROLE = {
+    "admins": "admin",
+    "admin": "admin",
+    "students": "student",
+    "student": "student",
+}
+
+
+def _normalize_groups(raw_groups: Any) -> Iterable[str]:
+    """
+    Normalize cognito:groups claim into an iterable of group names.
+
+    Handles common shapes observed from authorizers:
+    - list: ["Admins"]
+    - string: "Admins"
+    - CSV-ish string: "Admins,Students"
+    - JSON string: '["Admins","Students"]'
+    """
+    if raw_groups is None:
+        return []
+
+    if isinstance(raw_groups, list):
+        return [str(g).strip() for g in raw_groups if str(g).strip()]
+
+    if isinstance(raw_groups, str):
+        value = raw_groups.strip()
+        if not value:
+            return []
+
+        # Sometimes authorizers serialize arrays into JSON strings.
+        if value.startswith("[") and value.endswith("]"):
+            try:
+                parsed = json.loads(value)
+                if isinstance(parsed, list):
+                    return [str(g).strip() for g in parsed if str(g).strip()]
+            except json.JSONDecodeError:
+                # Some authorizers send non-JSON bracket form like: [Admins]
+                inner = value[1:-1].strip()
+                if not inner:
+                    return []
+                return [
+                    part.strip().strip("'\"")
+                    for part in inner.split(",")
+                    if part.strip().strip("'\"")
+                ]
+
+        if "," in value:
+            return [g.strip() for g in value.split(",") if g.strip()]
+
+        return [value]
+
+    return [str(raw_groups).strip()] if str(raw_groups).strip() else []
 
 
 def _user_roles_from_groups(user: Dict[str, Any]) -> set:
     """Derive role set from cognito:groups (and legacy custom:role)."""
     roles = set()
-    groups = user.get("cognito:groups") or []
-    if isinstance(groups, str):
-        groups = [groups]
+    groups = _normalize_groups(user.get("cognito:groups"))
     for g in groups:
-        if g in COGNITO_GROUP_TO_ROLE:
-            roles.add(COGNITO_GROUP_TO_ROLE[g])
+        role = COGNITO_GROUP_TO_ROLE.get(str(g).strip().lower())
+        if role:
+            roles.add(role)
     # Legacy: custom:role if no groups
     if not roles and user.get("custom:role"):
         roles.add(user.get("custom:role"))
@@ -187,13 +238,12 @@ def _user_roles_from_groups(user: Dict[str, Any]) -> set:
 def require_role(*allowed_roles: str):
     """
     Decorator to require Cognito group-based role for Lambda handler.
-    Uses cognito:groups from JWT: Admins -> admin, Organizers -> organizer.
-    Users in no group (e.g. Students only) have no admin/organizer role.
+    Uses cognito:groups from JWT: Admins -> admin, Students -> student.
 
     Usage:
         @require_role("admin")
         def handler(event, context): ...
-        @require_role("admin", "organizer")
+        @require_role("admin", "student")
         def handler(event, context): ...
     """
     allowed_set = set(allowed_roles)
@@ -211,6 +261,13 @@ def require_role(*allowed_roles: str):
                 }
 
             user_roles = _user_roles_from_groups(user)
+            logger.warning(
+                "Role check: allowed=%s groups=%s derived_roles=%s user_sub=%s",
+                list(allowed_set),
+                user.get("cognito:groups"),
+                list(user_roles),
+                user.get("sub") or user.get("cognito:username"),
+            )
             if not (user_roles & allowed_set):
                 return {
                     "statusCode": 403,

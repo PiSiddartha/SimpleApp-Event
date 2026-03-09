@@ -2,12 +2,12 @@
 
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { fetchAuthSession, signOut } from 'aws-amplify/auth';
+import { fetchAuthSession } from 'aws-amplify/auth';
 import { Hub } from 'aws-amplify/utils';
 import { Loader2 } from 'lucide-react';
 import '@/app/amplify-config';
 import 'aws-amplify/auth/enable-oauth-listener';
-import { isAdminFromToken } from '@/utils/jwt';
+import { getCurrentUserFromToken } from '@/utils/jwt';
 
 function getCodeFromUrl(): string | null {
   if (typeof window === 'undefined') return null;
@@ -35,18 +35,20 @@ export default function CallbackPage() {
       if (done.current) return;
       try {
         const session = await fetchAuthSession();
-        const accessToken = session.tokens?.accessToken?.toString();
         const idToken = session.tokens?.idToken?.toString();
-        const tokenToStore = idToken || accessToken;
-        if (tokenToStore && typeof window !== 'undefined') {
-          // cognito:groups is in ID token; backend needs it for admin role
-          if (!isAdminFromToken(tokenToStore)) {
-            await signOut();
-            done.current = true;
-            setError('Access denied. This app is for admin users only. Add your account to the "Admins" group in Cognito to sign in here.');
-            return;
+        if (!idToken) {
+          done.current = true;
+          setError('Sign-in completed, but ID token is missing. Please sign in again.');
+          return;
+        }
+
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('auth_token', idToken);
+          localStorage.setItem('auth_id_token', idToken);
+          const user = getCurrentUserFromToken(idToken);
+          if (user) {
+            localStorage.setItem('current_user', JSON.stringify(user));
           }
-          localStorage.setItem('auth_token', tokenToStore);
           done.current = true;
           router.replace('/dashboard');
         }

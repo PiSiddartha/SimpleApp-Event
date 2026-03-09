@@ -2,6 +2,7 @@
 
 import { authService } from '@/services/auth';
 import { LogOut, User } from 'lucide-react';
+import { useCurrentUser } from '@/context/current-user-context';
 
 interface NavbarProps {
   user?: {
@@ -11,6 +12,7 @@ interface NavbarProps {
 }
 
 export function Navbar({ user }: NavbarProps) {
+  const { currentUser } = useCurrentUser();
 
   const handleLogout = async () => {
     await authService.logout();
@@ -21,13 +23,13 @@ export function Navbar({ user }: NavbarProps) {
     <nav className="bg-white border-b border-gray-200 shadow-sm">
       <div className="flex items-center justify-between px-6 py-3.5">
         <div className="flex items-center gap-3">
-          <h1 className="text-lg font-bold text-primary-600">PayIntelli</h1>
+          <h1 className="text-lg font-bold text-primary-600">PiResearch Labs</h1>
           <span className="hidden sm:inline text-sm text-gray-500">Admin Dashboard</span>
         </div>
         <div className="flex items-center gap-2 sm:gap-4">
           <div className="flex items-center gap-2 text-sm text-gray-600 px-3 py-1.5 rounded-lg bg-gray-50">
             <User size={16} className="text-gray-500" />
-            <span>{user?.username || 'Admin'}</span>
+            <span>{currentUser?.email || user?.username || 'Admin'}</span>
           </div>
           <button
             onClick={handleLogout}

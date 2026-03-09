@@ -3,11 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
-import { isAdminFromToken } from '@/utils/jwt';
+import { isIdToken } from '@/utils/jwt';
 
 /**
- * Client guard: only render children if the stored token has Admins group.
- * Redirects to /login if not admin or no token.
+ * Client guard: allow dashboard only when a valid ID token is present.
+ * Role authorization is enforced by backend APIs.
  */
 export function AdminGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -15,14 +15,15 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const token = localStorage.getItem('auth_token');
+    const token = localStorage.getItem('auth_id_token') || localStorage.getItem('auth_token');
     if (!token) {
       router.replace('/login');
       return;
     }
-    if (!isAdminFromToken(token)) {
+    if (!isIdToken(token)) {
       localStorage.removeItem('auth_token');
-      router.replace('/login?error=access_denied');
+      localStorage.removeItem('auth_id_token');
+      router.replace('/login');
       return;
     }
     setAllowed(true);

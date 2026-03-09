@@ -9,13 +9,18 @@ class AuthService {
         password,
       });
       
-      // Get tokens (use ID token for API so backend gets cognito:groups for admin role)
+      // Use ID token for API so backend gets cognito:groups for admin role checks
       const session = await fetchAuthSession();
       const idToken = session.tokens?.idToken?.toString();
-      const token = idToken || session.tokens?.accessToken?.toString();
       
-      if (token) {
-        localStorage.setItem('auth_token', token);
+      if (idToken) {
+        localStorage.setItem('auth_token', idToken);
+        localStorage.setItem('auth_id_token', idToken);
+      } else {
+        return {
+          success: false,
+          error: 'Could not obtain ID token from Cognito session'
+        };
       }
       
       return { success: true, user: result };
@@ -36,6 +41,8 @@ class AuthService {
       if (!key) continue;
       if (
         key === 'auth_token' ||
+        key === 'auth_id_token' ||
+        key === 'current_user' ||
         key === 'authToken' ||
         key === 'idToken' ||
         key === 'refresh_token' ||
@@ -86,7 +93,7 @@ class AuthService {
 
   getToken(): string | null {
     if (typeof window !== 'undefined') {
-      return localStorage.getItem('auth_token');
+      return localStorage.getItem('auth_id_token') || localStorage.getItem('auth_token');
     }
     return null;
   }

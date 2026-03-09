@@ -52,15 +52,15 @@ resource "aws_cognito_user_pool" "main" {
 
 # Cognito App Client
 resource "aws_cognito_user_pool_client" "main" {
-  name                = var.cognito_client_name
-  user_pool_id        = aws_cognito_user_pool.main.id
+  name         = var.cognito_client_name
+  user_pool_id = aws_cognito_user_pool.main.id
 
   # OAuth settings
   # Callback URLs: where Cognito redirects after sign-in (Hosted UI).
   # Sign out URLs: where Cognito may redirect after sign-out; must match logout_uri/redirect_uri in app.
   supported_identity_providers = ["COGNITO"]
-  callback_urls = ["https://app.payintelli.com/callback", "http://localhost:3000/callback"]
-  logout_urls   = [
+  callback_urls                = ["https://app.payintelli.com/callback", "http://localhost:3000/callback"]
+  logout_urls = [
     "https://app.payintelli.com/logout",
     "http://localhost:3000/logout",
     "https://app.payintelli.com/login",
@@ -69,11 +69,11 @@ resource "aws_cognito_user_pool_client" "main" {
 
   allowed_oauth_flows                  = ["code", "implicit"]
   allowed_oauth_flows_user_pool_client = true
-  allowed_oauth_scopes                = ["phone", "email", "openid", "profile", "aws.cognito.signin.user.admin"]
+  allowed_oauth_scopes                 = ["phone", "email", "openid", "profile", "aws.cognito.signin.user.admin"]
 
   # Token settings (in hours)
   access_token_validity  = 1
-  id_token_validity     = 1
+  id_token_validity      = 1
   refresh_token_validity = 30
 
   # Enable token refresh

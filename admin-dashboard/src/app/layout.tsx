@@ -6,7 +6,7 @@ import Providers from './providers';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'PayIntelli Admin Dashboard',
+  title: 'PiResearch Labs Admin Dashboard',
   description: 'Manage your events, polls, and analytics',
 };
 

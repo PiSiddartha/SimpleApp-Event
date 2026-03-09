@@ -53,7 +53,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
         <View style={styles.content}>
           <View style={styles.header}>
             <Text style={styles.logo}>🎓</Text>
-            <Text style={styles.title}>PayIntelli</Text>
+            <Text style={styles.title}>PiResearch Labs</Text>
             <Text style={styles.subtitle}>Student Login</Text>
           </View>
 
@@ -104,7 +104,7 @@ export function LoginScreen({ onLoginSuccess }: LoginScreenProps) {
           </View>
 
           <Text style={styles.footer}>
-            Powered by PayIntelli Academy
+            Powered by PiResearch Labs
           </Text>
         </View>
       </KeyboardAvoidingView>

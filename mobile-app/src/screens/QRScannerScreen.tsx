@@ -34,13 +34,14 @@ export function QRScannerScreen({ onScanSuccess, onBack }: QRScannerScreenProps)
     
     setScanned(true);
     setProcessing(true);
+    let eventId = data;
     
     try {
       // Extract event_id from QR data
-      let eventId = data;
-      
       if (data.includes('/join/')) {
         eventId = data.split('/join/').pop() || data;
+      } else if (data.includes('/event/')) {
+        eventId = data.split('/event/').pop() || data;
       } else if (data.includes('/events/')) {
         eventId = data.split('/events/').pop() || data;
       }

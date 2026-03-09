@@ -12,10 +12,6 @@ from events.repository import EventRepository
 
 logger = logging.getLogger(__name__)
 
-# Base URL for QR codes
-QR_BASE_URL = "https://app.payintelli.com/event"
-
-
 class EventService:
     """Service for event-related business logic."""
     
@@ -66,8 +62,9 @@ class EventService:
             max_attendees=max_attendees,
         )
         
-        # Generate QR code URL
-        event.qr_code = f"{QR_BASE_URL}/{event_id}"
+        # QR payload consumed by mobile scanner. Use event_id directly so it
+        # works across environments and does not depend on a web route.
+        event.qr_code = event_id
         
         # Save to database
         self.repository.create(event)
@@ -87,10 +84,6 @@ class EventService:
         
         if not event:
             return None
-        
-        # Check ownership
-        if event.created_by != user_id:
-            raise PermissionError("Not authorized to update this event")
         
         # Update allowed fields
         updatable_fields = [
@@ -115,10 +108,7 @@ class EventService:
         
         if not event:
             return False
-        
-        if event.created_by != user_id:
-            raise PermissionError("Not authorized to delete this event")
-        
+
         return self.repository.delete(event_id)
     
     def get_event(self, event_id: str) -> Optional[Dict[str, Any]]:

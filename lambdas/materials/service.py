@@ -10,14 +10,22 @@ import os
 
 import boto3
 from botocore.exceptions import ClientError
+from botocore.config import Config
 
 from materials.repository import MaterialRepository
-from events.repository import EventRepository
+from shared.db import execute_query
 
 logger = logging.getLogger(__name__)
 
-# Initialize S3 client
-s3_client = boto3.client("s3")
+# Initialize S3 client with short timeouts so network issues do not block API calls.
+s3_client = boto3.client(
+    "s3",
+    config=Config(
+        connect_timeout=2,
+        read_timeout=2,
+        retries={"max_attempts": 1, "mode": "standard"},
+    ),
+)
 
 
 class MaterialService:
@@ -25,9 +33,16 @@ class MaterialService:
     
     def __init__(self):
         self.repository = MaterialRepository()
-        self.event_repo = EventRepository()
         self.bucket = os.environ.get("S3_MATERIALS_BUCKET", "payintelli-materials")
         self._engagement_service = None
+
+    def _event_exists(self, event_id: str) -> bool:
+        row = execute_query(
+            "SELECT id FROM events WHERE id = %s",
+            (event_id,),
+            fetch="one",
+        )
+        return bool(row)
     
     @property
     def engagement_service(self):
@@ -51,8 +66,7 @@ class MaterialService:
             Dict with material details and upload URL
         """
         # Verify event exists
-        event = self.event_repo.get_by_id(event_id)
-        if not event:
+        if not self._event_exists(event_id):
             logger.warning(f"Event not found: {event_id}")
             return None
         
@@ -106,29 +120,22 @@ class MaterialService:
         return material.to_dict() if material else None
     
     def delete_material(self, material_id: str, user_id: str) -> bool:
-        """Delete a material and its S3 object."""
+        """Delete a material record.
+
+        S3 deletion is intentionally skipped to avoid API timeouts from
+        private subnet networking. Bucket lifecycle rules handle cleanup.
+        """
+        logger.info("service.delete_material start material_id=%s", material_id)
         material = self.repository.get_by_id(material_id)
+        logger.info("service.delete_material repository.get_by_id done found=%s", bool(material))
         
         if not material:
             return False
         
-        # Check ownership via event
-        event = self.event_repo.get_by_id(material.event_id)
-        if not event or event.created_by != user_id:
-            logger.warning(f"User {user_id} not authorized to delete material {material_id}")
-            return False
-        
-        # Delete from S3
-        try:
-            # Extract key from URL
-            file_key = material.file_url.split(f"{self.bucket}.s3.amazonaws.com/")[-1]
-            s3_client.delete_object(Bucket=self.bucket, Key=file_key)
-            logger.info(f"Deleted S3 object: {file_key}")
-        except ClientError as e:
-            logger.warning(f"Failed to delete S3 object: {e}")
-        
-        # Delete from database
-        return self.repository.delete(material_id)
+        logger.info("service.delete_material deleting DB record material_id=%s", material_id)
+        deleted = self.repository.delete(material_id)
+        logger.info("service.delete_material repository.delete done deleted=%s", deleted)
+        return deleted
     
     def list_materials(self, event_id: str) -> List[Dict[str, Any]]:
         """List materials for an event."""

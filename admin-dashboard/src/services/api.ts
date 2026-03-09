@@ -1,12 +1,19 @@
 // API service
 // Base URL must NOT include /api — API Gateway routes are /events, /polls, etc. directly.
 import axios, { AxiosInstance, AxiosError } from 'axios';
+import { isIdToken } from '@/utils/jwt';
+import { CreateAdminUserInput } from '@/types/user';
 
 const rawUrl = process.env.NEXT_PUBLIC_API_URL || 'https://ggszk3v52a.execute-api.ap-south-1.amazonaws.com';
 const API_URL = rawUrl.replace(/\/api\/?$/, '');
 
 class ApiService {
   private client: AxiosInstance;
+  private clearLocalAuth() {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem('auth_token');
+    localStorage.removeItem('auth_id_token');
+  }
 
   constructor() {
     this.client = axios.create({
@@ -19,9 +26,13 @@ class ApiService {
     // Add auth token to requests
     this.client.interceptors.request.use((config) => {
       if (typeof window !== 'undefined') {
-        const token = localStorage.getItem('auth_token');
-        if (token) {
+        const token =
+          localStorage.getItem('auth_id_token') ||
+          localStorage.getItem('auth_token');
+        if (token && isIdToken(token)) {
           config.headers.Authorization = `Bearer ${token}`;
+        } else if (token && !isIdToken(token)) {
+          this.clearLocalAuth();
         }
       }
       return config;
@@ -31,10 +42,19 @@ class ApiService {
     this.client.interceptors.response.use(
       (response) => response,
       (error: AxiosError) => {
-        if (error.response?.status === 401) {
+        const status = error.response?.status;
+        if (status === 401) {
           if (typeof window !== 'undefined') {
-            localStorage.removeItem('auth_token');
+            this.clearLocalAuth();
             window.location.href = '/login';
+          }
+        }
+        if (status === 403 && typeof window !== 'undefined') {
+          const data = error.response?.data as { error?: string; message?: string } | undefined;
+          const message = `${data?.error || ''} ${data?.message || ''}`.toLowerCase();
+          if (message.includes('required role') || message.includes('forbidden')) {
+            this.clearLocalAuth();
+            window.location.href = '/login?error=access_denied';
           }
         }
         return Promise.reject(error);
@@ -73,7 +93,8 @@ class ApiService {
   async getPolls(eventId?: string) {
     const params = eventId ? { event_id: eventId } : {};
     const response = await this.client.get('/polls', { params });
-    return response.data;
+    const raw = response.data;
+    return Array.isArray(raw) ? raw : raw?.polls ?? raw?.data ?? [];
   }
 
   async getPoll(id: string) {
@@ -88,13 +109,21 @@ class ApiService {
 
   async getPollResults(id: string) {
     const response = await this.client.get(`/polls/${id}/results`);
-    return response.data;
+    const raw = response.data;
+    return {
+      ...raw,
+      results: Array.isArray(raw?.results) ? raw.results : [],
+    };
   }
 
   // Materials
   async getMaterials(eventId: string) {
     const response = await this.client.get('/materials', { params: { event_id: eventId } });
-    return response.data;
+    const raw = response.data;
+    return {
+      ...raw,
+      materials: Array.isArray(raw?.materials) ? raw.materials : [],
+    };
   }
 
   async createMaterial(data: any) {
@@ -116,6 +145,30 @@ class ApiService {
   async getEventAnalytics(eventId: string) {
     const response = await this.client.get(`/events/${eventId}/analytics`);
     return response.data;
+  }
+
+  // Users
+  async getAdminUsers() {
+    const response = await this.client.get('/admin-users');
+    const raw = response.data;
+    return {
+      users: Array.isArray(raw?.users) ? raw.users : [],
+      next_token: raw?.next_token,
+    };
+  }
+
+  async createAdminUser(data: CreateAdminUserInput) {
+    const response = await this.client.post('/admin-users', data);
+    return response.data;
+  }
+
+  async getUsers(group = 'Students') {
+    const response = await this.client.get('/users', { params: { group } });
+    const raw = response.data;
+    return {
+      users: Array.isArray(raw?.users) ? raw.users : [],
+      next_token: raw?.next_token,
+    };
   }
 }
 

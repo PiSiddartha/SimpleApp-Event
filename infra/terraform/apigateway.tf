@@ -67,6 +67,13 @@ resource "aws_apigatewayv2_integration" "analytics" {
   payload_format_version = "1.0"
 }
 
+resource "aws_apigatewayv2_integration" "users" {
+  api_id                 = aws_apigatewayv2_api.main.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.users.invoke_arn
+  payload_format_version = "1.0"
+}
+
 # ==================== ROUTES ====================
 # Events
 resource "aws_apigatewayv2_route" "events_post" {
@@ -256,6 +263,31 @@ resource "aws_apigatewayv2_route" "materials_id_delete" {
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
   target             = "integrations/${aws_apigatewayv2_integration.materials.id}"
+}
+
+# User management
+resource "aws_apigatewayv2_route" "admin_users_get" {
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "GET /admin-users"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  target             = "integrations/${aws_apigatewayv2_integration.users.id}"
+}
+
+resource "aws_apigatewayv2_route" "admin_users_post" {
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "POST /admin-users"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  target             = "integrations/${aws_apigatewayv2_integration.users.id}"
+}
+
+resource "aws_apigatewayv2_route" "users_get" {
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "GET /users"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  target             = "integrations/${aws_apigatewayv2_integration.users.id}"
 }
 
 # Default stage ($default = no stage prefix in URL; path is /events not /v1/events)
