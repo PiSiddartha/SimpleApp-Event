@@ -192,4 +192,68 @@ All from **project root** unless noted.
 
 ---
 
+## 7. Clearing cache
+
+Running Metro and Gradle builds creates cache. Use these when things act up or you want a clean slate.
+
+### Metro bundler cache
+
+From `mobile-app/`:
+
+```bash
+cd mobile-app
+npx expo start --clear
+```
+
+Or clear Metro cache without starting (e.g. before a build):
+
+```bash
+cd mobile-app
+rm -rf node_modules/.cache
+```
+
+### Gradle / Android build cache (manual — recommended)
+
+`./gradlew clean` can fail in this project because it runs native/CMake clean tasks that expect codegen directories inside `node_modules` that only exist after a full build. Use manual deletion instead:
+
+From project root:
+
+```bash
+cd mobile-app/android
+rm -rf app/build app/.cxx build
+cd ../..
+```
+
+- `app/build` — APK/AAB and app build outputs  
+- `app/.cxx` — native (CMake) build cache  
+- `build` — root Android build cache  
+
+Next `assembleRelease` or `bundleRelease` will do a full rebuild.
+
+### Full clean (Metro + Android, no Gradle clean)
+
+Use this when you want to clear everything and avoid `./gradlew clean` (which can fail with CMake/codegen errors):
+
+```bash
+# 1. Clear Metro / JS cache
+cd mobile-app
+rm -rf node_modules/.cache
+
+# 2. Remove Android build folders (no gradlew clean)
+cd android
+rm -rf app/build app/.cxx build
+cd ../..
+```
+
+Then run your build again from `mobile-app/android/`:
+
+```bash
+cd mobile-app/android
+./gradlew assembleRelease
+# or
+./gradlew bundleRelease
+```
+
+---
+
 *Last updated for PiLearn mobile app (Expo / React Native).*
