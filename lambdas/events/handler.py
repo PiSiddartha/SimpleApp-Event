@@ -16,6 +16,24 @@ def _extract_event_id(path: str) -> str:
     return parts[2] if len(parts) >= 3 else ""
 
 
+def _load_json_body(event: Dict[str, Any]) -> Dict[str, Any]:
+    body = event.get("body", "{}") or "{}"
+    if isinstance(body, dict):
+        return body
+    try:
+        return json.loads(body)
+    except json.JSONDecodeError as exc:
+        raise ValueError("Invalid JSON body") from exc
+
+
+def _parse_limit(value: Any, default: int = 50) -> int:
+    try:
+        limit = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(1, min(limit, 200))
+
+
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Main Lambda handler for events.
@@ -57,8 +75,15 @@ def create_event(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     Requires admin role.
     """
     from events.service import EventService
+    from shared.user_repository import get_or_create_user_from_claims
     
-    body = json.loads(event.get("body", "{}"))
+    try:
+        body = _load_json_body(event)
+    except ValueError as exc:
+        return create_error_response(400, str(exc))
+    app_user = get_or_create_user_from_claims(event.get("user", {}))
+    if not app_user:
+        return create_error_response(400, "Authenticated user profile could not be resolved")
     
     service = EventService()
     result = service.create_event(
@@ -69,7 +94,8 @@ def create_event(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         start_time=body.get("start_time"),
         end_time=body.get("end_time"),
         max_attendees=body.get("max_attendees"),
-        created_by=None,
+        visibility=body.get("visibility", "global"),
+        created_by=app_user.id,
     )
     
     # Format response with event_id and qr_url
@@ -91,7 +117,10 @@ def update_event(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     if not event_id:
         return create_error_response(400, "event_id is required")
     
-    body = json.loads(event.get("body", "{}"))
+    try:
+        body = _load_json_body(event)
+    except ValueError as exc:
+        return create_error_response(400, str(exc))
     
     service = EventService()
     result = service.update_event(
@@ -149,7 +178,8 @@ def list_events(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     
     service = EventService()
     result = service.list_events(
-        limit=int(params.get("limit", 50)),
+        limit=_parse_limit(params.get("limit", 50)),
+        visibility=params.get("visibility"),
     )
     
     return create_response(200, result)

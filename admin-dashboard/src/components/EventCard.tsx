@@ -1,26 +1,17 @@
 'use client';
 
 import { Event } from '@/types/event';
-import { Calendar, MapPin, Users, QrCode } from 'lucide-react';
+import { Calendar, MapPin, Users, QrCode, Pencil } from 'lucide-react';
+import { formatDateTimeInIst } from '@/utils/datetime';
 
 interface EventCardProps {
   event: Event;
   onQRClick?: () => void;
+  onEdit?: () => void;
   onClick?: () => void;
 }
 
-export function EventCard({ event, onQRClick, onClick }: EventCardProps) {
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'TBD';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
+export function EventCard({ event, onQRClick, onEdit, onClick }: EventCardProps) {
   const statusColors = {
     draft: 'bg-gray-100 text-gray-800',
     published: 'bg-blue-100 text-blue-800',
@@ -34,11 +25,18 @@ export function EventCard({ event, onQRClick, onClick }: EventCardProps) {
       className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow hover:border-gray-300 transition-all cursor-pointer"
       onClick={onClick}
     >
-      <div className="flex items-start justify-between mb-3">
+      <div className="flex items-start justify-between gap-2 mb-3">
         <h3 className="font-semibold text-gray-900">{event.name}</h3>
-        <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[event.status]}`}>
-          {event.status}
-        </span>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {event.visibility === 'private' && (
+            <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-amber-100 text-amber-800">
+              Private
+            </span>
+          )}
+          <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColors[event.status]}`}>
+            {event.status}
+          </span>
+        </div>
       </div>
       
       {event.description && (
@@ -48,7 +46,7 @@ export function EventCard({ event, onQRClick, onClick }: EventCardProps) {
       <div className="space-y-2 text-sm text-gray-600">
         <div className="flex items-center gap-2">
           <Calendar size={16} />
-          <span>{formatDate(event.start_time)}</span>
+          <span>{formatDateTimeInIst(event.start_time)} IST</span>
         </div>
         
         {event.location && (
@@ -66,18 +64,33 @@ export function EventCard({ event, onQRClick, onClick }: EventCardProps) {
         )}
       </div>
       
-      {onQRClick && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onQRClick();
-          }}
-          className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2 bg-primary-50 text-primary-600 rounded-lg text-sm font-medium hover:bg-primary-100 transition-colors"
-        >
-          <QrCode size={16} />
-          Generate QR Code
-        </button>
-      )}
+      <div className="mt-3 flex gap-2">
+        {onEdit && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit();
+            }}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+          >
+            <Pencil size={16} />
+            Edit
+          </button>
+        )}
+        {onQRClick && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onQRClick();
+            }}
+            className={`flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${onEdit ? 'flex-1' : 'w-full'} bg-primary-50 text-primary-600 hover:bg-primary-100`}
+          >
+            <QrCode size={16} />
+            Generate QR Code
+          </button>
+        )}
+      </div>
     </div>
   );
 }

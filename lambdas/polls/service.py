@@ -8,6 +8,7 @@ import logging
 from typing import Dict, Any, Optional, List
 
 from polls.repository import PollRepository, PollOptionRepository, VoteRepository
+from shared.db import execute_query
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +47,9 @@ class PollService:
         
         if not question or not options or len(options) < 2:
             logger.warning("Poll must have a question and at least 2 options")
+            return None
+        if not event_id or not execute_query("SELECT id FROM events WHERE id = %s", (event_id,), fetch="one"):
+            logger.warning("Cannot create poll for missing event: %s", event_id)
             return None
         
         # Create poll
@@ -92,8 +96,11 @@ class PollService:
         # Handle status changes
         if "status" in kwargs:
             from shared.models import PollStatus
-            poll.status = PollStatus(kwargs["status"])
-        
+            try:
+                poll.status = PollStatus(kwargs["status"])
+            except (TypeError, ValueError):
+                logger.warning("Ignoring invalid poll status update: %s", kwargs["status"])
+
         return self.poll_repo.update_poll(poll).to_dict()
     
     def delete_poll(self, poll_id: str, user_id: str) -> bool:

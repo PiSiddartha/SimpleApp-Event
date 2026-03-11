@@ -12,6 +12,14 @@ from shared.auth import require_auth, create_response, create_error_response
 logger = logging.getLogger(__name__)
 
 
+def _parse_limit(value: Any, default: int = 50) -> int:
+    try:
+        limit = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(1, min(limit, 200))
+
+
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Main Lambda handler for attendance."""
     try:
@@ -23,22 +31,22 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             parts = path.split("/")
             # /events/{event_id}/join
             if len(parts) >= 4 and parts[-1] == "join":
-                event_id = parts[2]
+                event["pathParameters"] = {**(event.get("pathParameters") or {}), "event_id": parts[2]}
                 if method == "POST":
-                    return join_event(event_id, event, context)
-        
-        # Route: GET /attendance (user's attendance history)
-        if path == "/attendance" or path.startswith("/attendance"):
-            if method == "GET":
-                return list_attendance(event, context)
+                    return join_event(event, context)
         
         # Route: GET /attendance/event/{event_id}
         if path.startswith("/attendance/event/"):
             parts = path.split("/")
             if len(parts) >= 4:
-                event_id = parts[3]
+                event["pathParameters"] = {**(event.get("pathParameters") or {}), "event_id": parts[3]}
                 if method == "GET":
-                    return get_event_attendance(event_id, event, context)
+                    return get_event_attendance(event, context)
+
+        # Route: GET /attendance (user's attendance history)
+        if path == "/attendance":
+            if method == "GET":
+                return list_attendance(event, context)
         
         return create_error_response(404, "Endpoint not found")
         
@@ -48,21 +56,23 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
 
 
 @require_auth
-def join_event(event_id: str, event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def join_event(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """
     Join an event (mark attendance).
     POST /events/{event_id}/join
     """
     from attendance.service import AttendanceService
+    from shared.user_repository import get_or_create_user_from_claims
+    event_id = (event.get("pathParameters") or {}).get("event_id")
+    if not event_id:
+        return create_error_response(400, "event_id is required")
     
-    user = event.get("user", {})
-    user_id = user.get("sub") or user.get("cognito:username")
-    
-    if not user_id:
+    app_user = get_or_create_user_from_claims(event.get("user", {}))
+    if not app_user:
         return create_error_response(401, "User identity not found")
     
     service = AttendanceService()
-    result = service.join_event(user_id=user_id, event_id=event_id)
+    result = service.join_event(user_id=app_user.id, event_id=event_id)
     
     if result is None:
         return create_error_response(404, "Event not found")
@@ -80,9 +90,12 @@ def join_event(event_id: str, event: Dict[str, Any], context: Any) -> Dict[str, 
 
 
 @require_auth
-def get_event_attendance(event_id: str, event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+def get_event_attendance(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Get attendance records for an event."""
     from attendance.service import AttendanceService
+    event_id = (event.get("pathParameters") or {}).get("event_id")
+    if not event_id:
+        return create_error_response(400, "event_id is required")
     
     service = AttendanceService()
     result = service.get_event_attendance(event_id)
@@ -94,15 +107,17 @@ def get_event_attendance(event_id: str, event: Dict[str, Any], context: Any) -> 
 def list_attendance(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """List attendance records for current user."""
     from attendance.service import AttendanceService
+    from shared.user_repository import get_or_create_user_from_claims
     
-    user = event.get("user", {})
-    user_id = user.get("sub") or user.get("cognito:username")
+    app_user = get_or_create_user_from_claims(event.get("user", {}))
+    if not app_user:
+        return create_error_response(401, "User identity not found")
     params = event.get("queryStringParameters", {}) or {}
     
     service = AttendanceService()
     result = service.list_user_attendance(
-        user_id=user_id,
-        limit=int(params.get("limit", 50)),
+        user_id=app_user.id,
+        limit=_parse_limit(params.get("limit", 50)),
     )
     
     return create_response(200, {"attendance": result})

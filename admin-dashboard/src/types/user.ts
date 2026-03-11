@@ -10,6 +10,15 @@ export interface CognitoUser {
   created_at?: string;
   updated_at?: string;
   groups?: string[];
+  access_role?: 'admin' | 'student';
+  user_type?: 'student' | 'professional' | null;
+  university?: string | null;
+  course?: string | null;
+  year_of_study?: string | null;
+  city?: string | null;
+  state?: string | null;
+  designation?: string | null;
+  company?: string | null;
 }
 
 export interface ListUsersResponse {
@@ -23,4 +32,3 @@ export interface CreateAdminUserInput {
   given_name?: string;
   family_name?: string;
 }
-

@@ -24,14 +24,17 @@ class UsersService:
     def _attributes_to_dict(attrs: List[Dict[str, str]]) -> Dict[str, str]:
         return {a.get("Name", ""): a.get("Value", "") for a in attrs or []}
 
-    def _serialize_user(self, user: Dict[str, Any]) -> Dict[str, Any]:
+    def _serialize_user(self, user: Dict[str, Any], groups: Optional[List[str]] = None) -> Dict[str, Any]:
         attrs = self._attributes_to_dict(user.get("Attributes") or user.get("UserAttributes") or [])
         username = user.get("Username")
-        groups_resp = self.client.admin_list_groups_for_user(
-            UserPoolId=self.user_pool_id,
-            Username=username,
-        )
-        groups = [g.get("GroupName") for g in groups_resp.get("Groups", []) if g.get("GroupName")]
+        resolved_groups = groups
+        if resolved_groups is None and username:
+            groups_resp = self.client.admin_list_groups_for_user(
+                UserPoolId=self.user_pool_id,
+                Username=username,
+            )
+            resolved_groups = [g.get("GroupName") for g in groups_resp.get("Groups", []) if g.get("GroupName")]
+        resolved_groups = resolved_groups or []
 
         return {
             "username": username,
@@ -44,7 +47,7 @@ class UsersService:
             "status": user.get("UserStatus"),
             "created_at": user.get("UserCreateDate").isoformat() if user.get("UserCreateDate") else None,
             "updated_at": user.get("UserLastModifiedDate").isoformat() if user.get("UserLastModifiedDate") else None,
-            "groups": groups,
+            "groups": resolved_groups,
         }
 
     def list_users(
@@ -64,7 +67,7 @@ class UsersService:
                 kwargs["NextToken"] = next_token
             resp = self.client.list_users_in_group(**kwargs)
             raw_users = resp.get("Users", [])
-            users = [self._serialize_user(u) for u in raw_users]
+            users = [self._serialize_user(u, groups=[group]) for u in raw_users]
             return {"users": users, "next_token": resp.get("NextToken")}
 
         kwargs = {
@@ -114,4 +117,3 @@ class UsersService:
             return None, "User already exists"
         except ClientError as exc:
             return None, exc.response.get("Error", {}).get("Message", "Cognito error")
-

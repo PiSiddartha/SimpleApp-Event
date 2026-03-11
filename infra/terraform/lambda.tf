@@ -179,7 +179,7 @@ resource "aws_lambda_function" "analytics" {
   }
 }
 
-# Users Lambda
+# Users Lambda (admin list + PUT /users/me profile upsert to RDS)
 resource "aws_lambda_function" "users" {
   filename      = "../../lambdas/users.zip"
   function_name = "${var.project_name}-users"
@@ -197,7 +197,8 @@ resource "aws_lambda_function" "users" {
   depends_on = [
     null_resource.build_lambdas,
     aws_iam_role_policy_attachment.lambda_basic,
-    aws_iam_role_policy_attachment.lambda_cognito
+    aws_iam_role_policy_attachment.lambda_cognito,
+    aws_iam_role_policy_attachment.lambda_rds
   ]
 }
 

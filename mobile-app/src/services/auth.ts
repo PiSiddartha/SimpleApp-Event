@@ -10,6 +10,22 @@ const USER_KEY = 'user_data';
 
 type UnauthorizedCallback = () => void;
 
+export type StoredUserData = {
+  id: string;
+  email: string;
+  name?: string;
+  given_name?: string;
+  family_name?: string;
+  user_type?: 'student' | 'professional';
+  university?: string;
+  course?: string;
+  year_of_study?: string;
+  city?: string;
+  state?: string;
+  designation?: string;
+  company?: string;
+};
+
 class AuthService {
   private onUnauthorized: UnauthorizedCallback | null = null;
 
@@ -115,7 +131,7 @@ class AuthService {
         },
       });
 
-      const nextStep = result.nextStep?.signInStep;
+      const nextStep = result.nextStep?.signUpStep;
       const destination = (result.nextStep as { codeDeliveryDetails?: { destination?: string } })?.codeDeliveryDetails?.destination;
       return {
         success: true,
@@ -212,8 +228,13 @@ class AuthService {
   }
 
   /** Build user payload with id, email, and name attributes from Cognito. */
-  private async buildUserData(id: string, email: string): Promise<{ id: string; email: string; name?: string; given_name?: string; family_name?: string }> {
-    const data: { id: string; email: string; name?: string; given_name?: string; family_name?: string } = { id, email };
+  private async buildUserData(id: string, email: string): Promise<StoredUserData> {
+    const existing = await this.getStoredUserData();
+    const data: StoredUserData = {
+      ...(existing ?? {}),
+      id,
+      email,
+    };
     try {
       const attrs = await fetchUserAttributes();
       const given = attrs?.given_name ?? attrs?.['given_name'];
@@ -229,11 +250,30 @@ class AuthService {
     return data;
   }
 
+  private async getStoredUserData(): Promise<StoredUserData | null> {
+    try {
+      const raw = await SecureStore.getItemAsync(USER_KEY);
+      return raw ? JSON.parse(raw) as StoredUserData : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async updateStoredUserData(patch: Partial<StoredUserData>) {
+    const current = await this.getStoredUserData();
+    const next = {
+      ...(current ?? {}),
+      ...patch,
+    };
+    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(next));
+    return next;
+  }
+
   async getCurrentUser() {
     try {
-      const userData = await SecureStore.getItemAsync(USER_KEY);
+      const userData = await this.getStoredUserData();
       if (userData) {
-        return { success: true, user: JSON.parse(userData) };
+        return { success: true, user: userData };
       }
       const user = await getCurrentUser();
       if (user) {

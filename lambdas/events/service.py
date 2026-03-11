@@ -6,11 +6,24 @@ Business logic for event operations.
 import uuid
 import logging
 from typing import Dict, Any, Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 from events.repository import EventRepository
 
 logger = logging.getLogger(__name__)
+IST = ZoneInfo("Asia/Kolkata")
+
+
+def _parse_event_datetime(value: Optional[str]) -> Optional[datetime]:
+    """Parse incoming event timestamps, treating timezone-less inputs as IST and storing UTC."""
+    if not value:
+        return None
+
+    parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=IST)
+    return parsed.astimezone(timezone.utc)
 
 class EventService:
     """Service for event-related business logic."""
@@ -28,9 +41,10 @@ class EventService:
         start_time: Optional[str] = None,
         end_time: Optional[str] = None,
         max_attendees: Optional[int] = None,
+        visibility: Optional[str] = "global",
     ) -> Dict[str, Any]:
         """Create a new event."""
-        from shared.models import Event, EventStatus, EventType
+        from shared.models import Event, EventStatus, EventType, EventVisibility
         
         # Generate event ID
         event_id = str(uuid.uuid4())
@@ -40,14 +54,19 @@ class EventService:
         end_dt = None
         if start_time:
             try:
-                start_dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
+                start_dt = _parse_event_datetime(start_time)
             except ValueError:
                 logger.warning(f"Invalid start_time format: {start_time}")
         if end_time:
             try:
-                end_dt = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
+                end_dt = _parse_event_datetime(end_time)
             except ValueError:
                 logger.warning(f"Invalid end_time format: {end_time}")
+        
+        try:
+            vis = EventVisibility(visibility) if visibility else EventVisibility.GLOBAL
+        except (ValueError, TypeError):
+            vis = EventVisibility.GLOBAL
         
         event = Event(
             id=event_id,
@@ -60,6 +79,7 @@ class EventService:
             created_by=created_by,
             status=EventStatus.DRAFT,
             max_attendees=max_attendees,
+            visibility=vis,
         )
         
         # QR payload consumed by mobile scanner. Use event_id directly so it
@@ -88,14 +108,30 @@ class EventService:
         # Update allowed fields
         updatable_fields = [
             "name", "description", "location", "event_type",
-            "start_time", "end_time", "status", "max_attendees"
+            "start_time", "end_time", "status", "max_attendees", "visibility"
         ]
         
+        from shared.models import EventType as EventTypeEnum, EventStatus as EventStatusEnum, EventVisibility
         for key, value in kwargs.items():
             if key in updatable_fields and hasattr(event, key):
-                if key in ("start_time", "end_time") and value:
+                if key == "visibility" and value:
                     try:
-                        value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+                        value = EventVisibility(value) if value in ("global", "private") else event.visibility
+                    except (ValueError, TypeError):
+                        pass
+                elif key == "event_type" and value:
+                    try:
+                        value = EventTypeEnum(value) if value in ("offline", "online", "hybrid") else getattr(event, key)
+                    except (ValueError, TypeError):
+                        pass
+                elif key == "status" and value:
+                    try:
+                        value = EventStatusEnum(value) if value in ("draft", "published", "ongoing", "completed", "cancelled") else getattr(event, key)
+                    except (ValueError, TypeError):
+                        pass
+                elif key in ("start_time", "end_time") and value:
+                    try:
+                        value = _parse_event_datetime(value)
                     except ValueError:
                         logger.warning(f"Invalid {key} format: {value}")
                 setattr(event, key, value)
@@ -116,7 +152,7 @@ class EventService:
         event = self.repository.get_by_id(event_id)
         return event.to_dict() if event else None
     
-    def list_events(self, limit: int = 50) -> List[Dict[str, Any]]:
-        """List all events."""
-        events = self.repository.get_all_events(limit)
+    def list_events(self, limit: int = 50, visibility: Optional[str] = None) -> List[Dict[str, Any]]:
+        """List all events, optionally filtered by visibility (e.g. 'global' for public list)."""
+        events = self.repository.get_all_events(limit=limit, visibility=visibility)
         return [e.to_dict() for e in events]

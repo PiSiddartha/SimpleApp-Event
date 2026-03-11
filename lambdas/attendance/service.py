@@ -8,7 +8,6 @@ import logging
 from typing import Dict, Any, Optional, List
 from datetime import datetime, timezone, timedelta
 
-from events.repository import EventRepository
 from attendance.repository import AttendanceRepository
 
 logger = logging.getLogger(__name__)
@@ -19,7 +18,6 @@ class AttendanceService:
     
     def __init__(self):
         self.attendance_repo = AttendanceRepository()
-        self.event_repo = EventRepository()
         self._engagement_service = None
     
     @property
@@ -42,7 +40,7 @@ class AttendanceService:
             - None if event not found
         """
         # Verify event exists
-        event = self.event_repo.get_by_id(event_id)
+        event = self.attendance_repo.get_event(event_id)
         
         if not event:
             logger.warning(f"Event not found: {event_id}")

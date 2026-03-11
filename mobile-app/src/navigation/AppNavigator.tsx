@@ -10,17 +10,22 @@ import { LoginScreen } from '@/screens/LoginScreen';
 import { AuthHomeScreen } from '@/screens/AuthHomeScreen';
 import { SignUpScreen } from '@/screens/SignUpScreen';
 import { ConfirmSignUpScreen } from '@/screens/ConfirmSignUpScreen';
+import { CompleteProfileScreen } from '@/screens/CompleteProfileScreen';
 import { HomeScreen } from '@/screens/HomeScreen';
 import { EventScreen } from '@/screens/EventScreen';
 import { PollScreen } from '@/screens/PollScreen';
 import { MaterialsScreen } from '@/screens/MaterialsScreen';
 import { LeaderboardScreen } from '@/screens/LeaderboardScreen';
+import { LeaderboardHomeScreen } from '@/screens/LeaderboardHomeScreen';
 import { QRScannerScreen } from '@/screens/QRScannerScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
+import { EditProfileScreen } from '@/screens/EditProfileScreen';
+import { CoursesScreen } from '@/screens/CoursesScreen';
 import { colors, spacing } from '@/theme/colors';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
+type SignUpFlowParams = { email?: string; password?: string; name?: string };
 
 // Main Tab Navigator
 function MainTabs({ onLogout }: { onLogout: (() => void) | null }) {
@@ -29,7 +34,6 @@ function MainTabs({ onLogout }: { onLogout: (() => void) | null }) {
       screenOptions={{
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textMuted,
-        tabBarShowIcon: true,
         tabBarStyle: {
           height: 56,
           paddingBottom: 8,
@@ -73,6 +77,15 @@ function MainTabs({ onLogout }: { onLogout: (() => void) | null }) {
                 <ProfileScreen
                   onBack={() => navigation.goBack()}
                   onLogout={onLogout ? () => onLogout() : () => {}}
+                  onEditProfile={() => navigation.navigate('EditProfile')}
+                />
+              )}
+            </Stack.Screen>
+            <Stack.Screen name="EditProfile">
+              {({ navigation }: any) => (
+                <EditProfileScreen
+                  onBack={() => navigation.goBack()}
+                  onSaved={() => navigation.replace('Profile')}
                 />
               )}
             </Stack.Screen>
@@ -106,7 +119,23 @@ function MainTabs({ onLogout }: { onLogout: (() => void) | null }) {
           </Stack.Navigator>
         )}
       </Tab.Screen>
-      
+
+      <Tab.Screen
+        name="Courses"
+        options={{
+          tabBarLabel: 'Courses',
+          tabBarIcon: ({ focused, color, size }) => (
+            <Ionicons name={focused ? 'book' : 'book-outline'} size={size ?? 24} color={color} />
+          ),
+        }}
+      >
+        {() => (
+          <Stack.Navigator screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="CoursesMain" component={CoursesScreen} />
+          </Stack.Navigator>
+        )}
+      </Tab.Screen>
+
       <Tab.Screen
         name="Leaderboard"
         options={{
@@ -120,10 +149,17 @@ function MainTabs({ onLogout }: { onLogout: (() => void) | null }) {
           <Stack.Navigator screenOptions={{ headerShown: false }}>
             <Stack.Screen name="LeaderboardMain">
               {({ navigation }: any) => (
-                <PlaceholderScreen 
-                  title="Leaderboard"
-                  description="Join an event to see the leaderboard"
-                  onAction={() => navigation.navigate('Home')}
+                <LeaderboardHomeScreen
+                  onOpenEvents={() => navigation.navigate('Home')}
+                  onOpenLeaderboard={(eventId) => navigation.navigate('LeaderboardDetail', { eventId })}
+                />
+              )}
+            </Stack.Screen>
+            <Stack.Screen name="LeaderboardDetail">
+              {({ route, navigation }: any) => (
+                <LeaderboardScreen
+                  eventId={route.params?.eventId}
+                  onBack={() => navigation.goBack()}
                 />
               )}
             </Stack.Screen>
@@ -264,18 +300,48 @@ function AuthStack({ onLoginSuccess }: { onLoginSuccess: () => void }) {
       <Stack.Screen name="SignUp">
         {({ navigation }) => (
           <SignUpScreen
-            onSuccess={(email) => navigation.navigate('ConfirmSignUp', { email })}
+            onSuccess={(email, password, name) =>
+              navigation.navigate('ConfirmSignUp', { email, password, name })
+            }
             onSignIn={() => navigation.navigate('Login')}
           />
         )}
       </Stack.Screen>
       <Stack.Screen name="ConfirmSignUp">
         {({ route, navigation }) => (
+          (() => {
+            const params = (route.params as SignUpFlowParams | undefined) ?? {};
+            return (
           <ConfirmSignUpScreen
-            email={route.params?.email ?? ''}
-            onSuccess={() => navigation.navigate('Login')}
+            email={params.email ?? ''}
+            password={params.password}
+            name={params.name}
+            onSuccess={() =>
+              navigation.navigate('CompleteProfile', {
+                email: params.email ?? '',
+                password: params.password ?? '',
+                name: params.name,
+              })
+            }
             onResend={() => {}}
           />
+            );
+          })()
+        )}
+      </Stack.Screen>
+      <Stack.Screen name="CompleteProfile">
+        {({ route, navigation }) => (
+          (() => {
+            const params = (route.params as SignUpFlowParams | undefined) ?? {};
+            return (
+          <CompleteProfileScreen
+            email={params.email ?? ''}
+            password={params.password ?? ''}
+            name={params.name}
+            onComplete={onLoginSuccess}
+          />
+            );
+          })()
         )}
       </Stack.Screen>
     </Stack.Navigator>

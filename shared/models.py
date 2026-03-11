@@ -32,11 +32,23 @@ class EventType(str, Enum):
     HYBRID = "hybrid"
 
 
+class EventVisibility(str, Enum):
+    """Event visibility: global (listed) or private (QR only)."""
+    GLOBAL = "global"
+    PRIVATE = "private"
+
+
 class PollStatus(str, Enum):
     """Poll status values."""
     DRAFT = "draft"
     ACTIVE = "active"
     CLOSED = "closed"
+
+
+class UserType(str, Enum):
+    """User type: student or professional."""
+    STUDENT = "student"
+    PROFESSIONAL = "professional"
 
 
 @dataclass
@@ -49,6 +61,13 @@ class User:
     phone: Optional[str] = None
     company: Optional[str] = None
     role: UserRole = UserRole.ATTENDEE
+    user_type: Optional[str] = None  # 'student' | 'professional'
+    university: Optional[str] = None
+    course: Optional[str] = None
+    year_of_study: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    designation: Optional[str] = None
     created_at: datetime = field(default_factory=datetime.utcnow)
     
     def to_dict(self) -> dict:
@@ -60,6 +79,13 @@ class User:
             "phone": self.phone,
             "company": self.company,
             "role": self.role.value,
+            "user_type": self.user_type,
+            "university": self.university,
+            "course": self.course,
+            "year_of_study": self.year_of_study,
+            "city": self.city,
+            "state": self.state,
+            "designation": self.designation,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
@@ -78,6 +104,7 @@ class Event:
     status: EventStatus = EventStatus.DRAFT
     qr_code: Optional[str] = None
     max_attendees: Optional[int] = None
+    visibility: EventVisibility = EventVisibility.GLOBAL
     created_at: datetime = field(default_factory=datetime.utcnow)
     
     def to_dict(self) -> dict:
@@ -93,6 +120,7 @@ class Event:
             "status": self.status.value,
             "qr_code": self.qr_code,
             "max_attendees": self.max_attendees,
+            "visibility": self.visibility.value if self.visibility else "global",
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 

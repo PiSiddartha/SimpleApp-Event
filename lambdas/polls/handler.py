@@ -16,6 +16,16 @@ def _extract_poll_id(path: str) -> str:
     return parts[2] if len(parts) >= 3 else ""
 
 
+def _load_json_body(event: Dict[str, Any]) -> Dict[str, Any]:
+    body = event.get("body", "{}") or "{}"
+    if isinstance(body, dict):
+        return body
+    try:
+        return json.loads(body)
+    except json.JSONDecodeError as exc:
+        raise ValueError("Invalid JSON body") from exc
+
+
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Main Lambda handler for polls."""
     try:
@@ -70,15 +80,22 @@ def create_poll(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     POST /polls
     """
     from polls.service import PollService
+    from shared.user_repository import get_or_create_user_from_claims
     
-    body = json.loads(event.get("body", "{}"))
+    try:
+        body = _load_json_body(event)
+    except ValueError as exc:
+        return create_error_response(400, str(exc))
+    app_user = get_or_create_user_from_claims(event.get("user", {}))
+    if not app_user:
+        return create_error_response(400, "Authenticated user profile could not be resolved")
     
     service = PollService()
     result = service.create_poll(
         event_id=body.get("event_id"),
         question=body.get("question"),
         options=body.get("options", []),
-        created_by=None,
+        created_by=app_user.id,
     )
     
     if not result:
@@ -99,7 +116,10 @@ def update_poll(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     if not poll_id:
         return create_error_response(400, "poll_id is required")
 
-    body = json.loads(event.get("body", "{}"))
+    try:
+        body = _load_json_body(event)
+    except ValueError as exc:
+        return create_error_response(400, str(exc))
     user = event.get("user", {})
     user_id = user.get("sub") or user.get("cognito:username")
     
@@ -199,14 +219,19 @@ def cast_vote(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     POST /polls/{poll_id}/vote
     """
     from polls.service import PollService
+    from shared.user_repository import get_or_create_user_from_claims
     
     poll_id = _extract_poll_id(event.get("path", ""))
     if not poll_id:
         return create_error_response(400, "poll_id is required")
 
-    body = json.loads(event.get("body", "{}"))
-    user = event.get("user", {})
-    user_id = user.get("sub") or user.get("cognito:username")
+    try:
+        body = _load_json_body(event)
+    except ValueError as exc:
+        return create_error_response(400, str(exc))
+    app_user = get_or_create_user_from_claims(event.get("user", {}))
+    if not app_user:
+        return create_error_response(401, "User identity not found")
     
     option_id = body.get("option_id")
     if not option_id:
@@ -215,7 +240,7 @@ def cast_vote(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     service = PollService()
     result = service.cast_vote(
         poll_id=poll_id,
-        user_id=user_id,
+        user_id=app_user.id,
         option_id=option_id,
     )
     

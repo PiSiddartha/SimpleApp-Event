@@ -1,0 +1,313 @@
+// Complete profile after email verification: student vs professional → submit → signIn + PUT /users/me → main app
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+  ScrollView,
+} from 'react-native';
+import { colors, spacing, borderRadius } from '@/theme/colors';
+import { PiLogo } from '@/components/PiLogo';
+import { Ionicons } from '@expo/vector-icons';
+
+export type UserType = 'student' | 'professional';
+
+interface CompleteProfileScreenProps {
+  email: string;
+  password: string;
+  name?: string; // from sign-up (given + family)
+  onComplete: () => void;
+}
+
+export function CompleteProfileScreen({ email, password, name, onComplete }: CompleteProfileScreenProps) {
+  const [userType, setUserType] = useState<UserType | null>(null);
+  const [university, setUniversity] = useState('');
+  const [course, setCourse] = useState('');
+  const [yearOfStudy, setYearOfStudy] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [designation, setDesignation] = useState('');
+  const [company, setCompany] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async () => {
+    if (!userType) {
+      setError('Please select Student or Working professional');
+      return;
+    }
+    if (userType === 'student') {
+      if (!university.trim()) {
+        setError('Please enter your university');
+        return;
+      }
+      if (!course.trim()) {
+        setError('Please enter your course');
+        return;
+      }
+      if (!yearOfStudy.trim()) {
+        setError('Please enter year of study');
+        return;
+      }
+      if (!city.trim()) {
+        setError('Please enter city');
+        return;
+      }
+      if (!state.trim()) {
+        setError('Please enter state');
+        return;
+      }
+    } else {
+      if (!designation.trim()) {
+        setError('Please enter your designation');
+        return;
+      }
+      if (!company.trim()) {
+        setError('Please enter your company');
+        return;
+      }
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const { authService } = await import('@/services/auth');
+      const { api } = await import('@/services/api');
+
+      const loginResult = await authService.login(email, password);
+      if (!loginResult.success) {
+        setError(loginResult.error ?? 'Sign in failed. Please try again.');
+        setLoading(false);
+        return;
+      }
+
+      const payload: Parameters<typeof api.updateMyProfile>[0] = {
+        user_type: userType,
+        name: name?.trim() || undefined,
+      };
+      if (userType === 'student') {
+        payload.university = university.trim();
+        payload.course = course.trim();
+        payload.year_of_study = yearOfStudy.trim();
+        payload.city = city.trim();
+        payload.state = state.trim();
+      } else {
+        payload.designation = designation.trim();
+        payload.company = company.trim();
+      }
+
+      await api.updateMyProfile(payload);
+      await authService.updateStoredUserData(payload);
+      onComplete();
+    } catch (err: unknown) {
+      const msg = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { data?: { message?: string; error?: string } } }).response?.data?.message
+          || (err as { response?: { data?: { error?: string } } }).response?.data?.error
+        : null;
+      setError(msg || (err instanceof Error ? err.message : 'Failed to save profile'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardView}>
+        <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+          <View style={styles.header}>
+            <PiLogo size={56} />
+            <Text style={styles.title}>Complete your profile</Text>
+            <Text style={styles.subtitle}>Tell us a bit about yourself</Text>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.label}>I am a</Text>
+            <View style={styles.optionRow}>
+              <TouchableOpacity
+                style={[styles.optionButton, userType === 'student' && styles.optionButtonActive]}
+                onPress={() => setUserType('student')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="school-outline" size={24} color={userType === 'student' ? colors.white : colors.text} />
+                <Text style={[styles.optionText, userType === 'student' && styles.optionTextActive]}>Student</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.optionButton, userType === 'professional' && styles.optionButtonActive]}
+                onPress={() => setUserType('professional')}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="briefcase-outline" size={24} color={userType === 'professional' ? colors.white : colors.text} />
+                <Text style={[styles.optionText, userType === 'professional' && styles.optionTextActive]}>Working professional</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {userType === 'student' && (
+            <View style={styles.form}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>University *</Text>
+                <TextInput
+                  style={styles.input}
+                  value={university}
+                  onChangeText={setUniversity}
+                  placeholder="Your university"
+                  placeholderTextColor={colors.textMuted}
+                  editable={!loading}
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Course registered *</Text>
+                <TextInput
+                  style={styles.input}
+                  value={course}
+                  onChangeText={setCourse}
+                  placeholder="e.g. B.Tech CSE"
+                  placeholderTextColor={colors.textMuted}
+                  editable={!loading}
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Year of study *</Text>
+                <TextInput
+                  style={styles.input}
+                  value={yearOfStudy}
+                  onChangeText={setYearOfStudy}
+                  placeholder="e.g. 2nd year"
+                  placeholderTextColor={colors.textMuted}
+                  editable={!loading}
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>City *</Text>
+                <TextInput
+                  style={styles.input}
+                  value={city}
+                  onChangeText={setCity}
+                  placeholder="City"
+                  placeholderTextColor={colors.textMuted}
+                  editable={!loading}
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>State *</Text>
+                <TextInput
+                  style={styles.input}
+                  value={state}
+                  onChangeText={setState}
+                  placeholder="State"
+                  placeholderTextColor={colors.textMuted}
+                  editable={!loading}
+                />
+              </View>
+            </View>
+          )}
+
+          {userType === 'professional' && (
+            <View style={styles.form}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Designation *</Text>
+                <TextInput
+                  style={styles.input}
+                  value={designation}
+                  onChangeText={setDesignation}
+                  placeholder="e.g. Software Engineer"
+                  placeholderTextColor={colors.textMuted}
+                  editable={!loading}
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Company *</Text>
+                <TextInput
+                  style={styles.input}
+                  value={company}
+                  onChangeText={setCompany}
+                  placeholder="Company name"
+                  placeholderTextColor={colors.textMuted}
+                  editable={!loading}
+                />
+              </View>
+            </View>
+          )}
+
+          {error ? (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
+
+          {userType ? (
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleSubmit}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color={colors.white} />
+              ) : (
+                <Text style={styles.buttonText}>Continue</Text>
+              )}
+            </TouchableOpacity>
+          ) : null}
+
+          <Text style={styles.footer}>Powered by PiResearch Labs</Text>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  keyboardView: { flex: 1 },
+  scrollContent: { padding: spacing.xxl, paddingBottom: 40 },
+  header: { alignItems: 'center', marginBottom: 28 },
+  title: { fontSize: 22, fontWeight: '700', color: colors.text, marginBottom: spacing.xs },
+  subtitle: { fontSize: 14, color: colors.textSecondary },
+  section: { marginBottom: spacing.lg },
+  label: { fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: spacing.sm },
+  optionRow: { flexDirection: 'row', gap: 12 },
+  optionButton: {
+    flex: 1,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.lg,
+    borderWidth: 2,
+    borderColor: colors.border,
+    alignItems: 'center',
+    backgroundColor: colors.backgroundCard,
+  },
+  optionButtonActive: { borderColor: colors.primary, backgroundColor: colors.primary },
+  optionText: { fontSize: 14, fontWeight: '600', color: colors.text, marginTop: 6 },
+  optionTextActive: { color: colors.white },
+  form: { marginBottom: spacing.lg },
+  inputGroup: { marginBottom: spacing.md },
+  inputLabel: { fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 6 },
+  input: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    padding: 14,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    color: colors.text,
+  },
+  errorBox: { backgroundColor: colors.errorBg, padding: spacing.md, borderRadius: borderRadius.md, marginBottom: spacing.lg },
+  errorText: { color: colors.error, fontSize: 14 },
+  button: {
+    backgroundColor: colors.primary,
+    padding: spacing.lg,
+    borderRadius: borderRadius.lg,
+    alignItems: 'center',
+    marginTop: spacing.md,
+  },
+  buttonDisabled: { opacity: 0.6 },
+  buttonText: { color: colors.white, fontSize: 16, fontWeight: '600' },
+  footer: { textAlign: 'center', color: colors.textMuted, fontSize: 13, marginTop: 32 },
+});

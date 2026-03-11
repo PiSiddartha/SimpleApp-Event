@@ -290,6 +290,23 @@ resource "aws_apigatewayv2_route" "users_get" {
   target             = "integrations/${aws_apigatewayv2_integration.users.id}"
 }
 
+resource "aws_apigatewayv2_route" "users_me_get" {
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "GET /users/me"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  target             = "integrations/${aws_apigatewayv2_integration.users.id}"
+}
+
+# PUT /users/me – profile update (auth required)
+resource "aws_apigatewayv2_route" "users_me_put" {
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "PUT /users/me"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  target             = "integrations/${aws_apigatewayv2_integration.users.id}"
+}
+
 # Default stage ($default = no stage prefix in URL; path is /events not /v1/events)
 resource "aws_apigatewayv2_stage" "main" {
   api_id      = aws_apigatewayv2_api.main.id
@@ -299,6 +316,22 @@ resource "aws_apigatewayv2_stage" "main" {
   default_route_settings {
     throttling_rate_limit  = 1000
     throttling_burst_limit = 5000
+  }
+
+  access_log_settings {
+    destination_arn = aws_cloudwatch_log_group.api_gateway.arn
+    format = jsonencode({
+      requestId      = "$context.requestId"
+      ip             = "$context.identity.sourceIp"
+      requestTime    = "$context.requestTime"
+      httpMethod     = "$context.httpMethod"
+      routeKey       = "$context.routeKey"
+      status         = "$context.status"
+      protocol       = "$context.protocol"
+      responseLength = "$context.responseLength"
+      integrationErr = "$context.integrationErrorMessage"
+      errorMessage   = "$context.error.message"
+    })
   }
 
   tags = {

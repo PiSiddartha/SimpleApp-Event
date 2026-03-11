@@ -20,10 +20,9 @@ export function useCreateAdminUser() {
   });
 }
 
-export function useUsers(group = 'Students') {
+export function useUsers(group = 'All') {
   return useQuery({
     queryKey: ['users', group],
     queryFn: () => api.getUsers(group),
   });
 }
-

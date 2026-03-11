@@ -28,13 +28,13 @@ export function PollScreen({ pollId, onBack }: PollScreenProps) {
   const handleVote = async (optionId: string) => {
     try {
       await castVote.mutateAsync({ pollId, optionId });
-      Alert.alert('Success', 'Your vote has been recorded!');
+      Alert.alert('Success', 'Your answer has been recorded.');
       refetch();
     } catch (error: any) {
       if (error.response?.data?.message?.includes('already voted')) {
-        Alert.alert('Info', 'You have already voted in this poll');
+        Alert.alert('Info', 'You have already answered this question.');
       } else {
-        Alert.alert('Error', 'Failed to submit vote');
+        Alert.alert('Error', 'Failed to submit your answer.');
       }
     }
   };
@@ -85,7 +85,7 @@ export function PollScreen({ pollId, onBack }: PollScreenProps) {
         {/* Voting Options */}
         {poll.status === 'active' && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Cast Your Vote</Text>
+            <Text style={styles.sectionTitle}>Choose the correct answer</Text>
             {poll.options?.map((option: PollOption) => (
               <TouchableOpacity
                 key={option.id}

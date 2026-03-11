@@ -28,7 +28,7 @@ export function AuthHomeScreen({ onSignIn, onCreateAccount }: AuthHomeScreenProp
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.footer}>Powered by PiLearn</Text>
+        <Text style={styles.footer}>Powered by PiResearch Labs</Text>
       </View>
     </SafeAreaView>
   );

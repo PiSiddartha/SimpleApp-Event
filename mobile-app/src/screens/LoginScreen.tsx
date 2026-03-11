@@ -117,7 +117,7 @@ export function LoginScreen({ onLoginSuccess, onCreateAccount }: LoginScreenProp
           </View>
 
           <Text style={styles.footer}>
-            Powered by PiLearn
+            Powered by PiResearch Labs
           </Text>
         </View>
       </KeyboardAvoidingView>

@@ -18,7 +18,7 @@ import { PiLogo } from '@/components/PiLogo';
 const PASSWORD_HINT = '8+ characters, upper & lower case, number, symbol';
 
 interface SignUpScreenProps {
-  onSuccess: (email: string) => void;
+  onSuccess: (email: string, password: string, name?: string) => void;
   onSignIn: () => void;
 }
 
@@ -80,7 +80,8 @@ export function SignUpScreen({ onSuccess, onSignIn }: SignUpScreenProps) {
       });
 
       if (result.success) {
-        onSuccess(trimmedEmail);
+        const fullName = [trimmedGiven, trimmedFamily].filter(Boolean).join(' ').trim() || undefined;
+        onSuccess(trimmedEmail, password, fullName);
       } else {
         setError(result.error ?? 'Sign up failed');
       }
@@ -182,7 +183,7 @@ export function SignUpScreen({ onSuccess, onSignIn }: SignUpScreenProps) {
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.footer}>Powered by PiLearn</Text>
+          <Text style={styles.footer}>Powered by PiResearch Labs</Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -3,10 +3,10 @@ import { useQuery, useMutation } from '@tanstack/react-query';
 import { api } from '@/services/api';
 import { Event, EventAnalytics } from '@/types/event';
 
-export function useEvents() {
+export function useEvents(visibility?: 'global' | 'private') {
   return useQuery({
-    queryKey: ['events'],
-    queryFn: () => api.getEvents(),
+    queryKey: ['events', visibility],
+    queryFn: () => api.getEvents(visibility ? { visibility } : undefined),
   });
 }
 

@@ -33,6 +33,9 @@ class AnalyticsService:
         Returns:
             Dict with event analytics or None if event not found
         """
+        if not self.repository.event_exists(event_id):
+            return None
+
         # Get attendance count
         attendance_count = self.repository.get_attendance_count(event_id)
         
@@ -73,6 +76,27 @@ class AnalyticsService:
             "average_engagement_score": average_engagement_score,
             "top_students": top_students,
         }
+
+    def can_view_event_analytics(
+        self,
+        event_id: str,
+        app_user_id: str,
+        is_admin: bool = False,
+    ) -> bool:
+        """
+        Return whether the caller can view event analytics.
+
+        Admins can view any event. Non-admin users must either be the organizer
+        or have joined the event.
+        """
+        if is_admin:
+            return True
+
+        owner_id = self.repository.get_event_owner_id(event_id)
+        if owner_id and owner_id == app_user_id:
+            return True
+
+        return self.repository.is_event_attendee(event_id, app_user_id)
     
     def get_overview(
         self,
@@ -108,14 +132,24 @@ class AnalyticsService:
         Returns:
             Dict with student analytics or None if student not found
         """
+        if not self.repository.user_exists(student_id):
+            return None
+
         # Get attendance history
         attendance = self.repository.get_student_attendance(student_id)
-        
         if not attendance:
-            return None
+            attendance = {
+                "total_attendances": 0,
+                "unique_events": 0,
+                "attendance_rate": 0.0,
+            }
         
         # Get poll participation
-        polls = self.repository.get_student_poll_stats(student_id)
+        polls = self.repository.get_student_poll_stats(student_id) or {
+            "polls_answered": 0,
+            "total_votes": 0,
+            "participation_rate": 0.0,
+        }
         
         # Calculate engagement score
         engagement_score = self._calculate_engagement_score(attendance, polls)

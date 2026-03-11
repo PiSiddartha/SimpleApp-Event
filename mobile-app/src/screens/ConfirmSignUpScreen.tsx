@@ -16,11 +16,13 @@ import { PiLogo } from '@/components/PiLogo';
 
 interface ConfirmSignUpScreenProps {
   email: string;
+  password?: string;
+  name?: string;
   onSuccess: () => void;
   onResend: () => void;
 }
 
-export function ConfirmSignUpScreen({ email, onSuccess, onResend }: ConfirmSignUpScreenProps) {
+export function ConfirmSignUpScreen({ email, password, name, onSuccess, onResend }: ConfirmSignUpScreenProps) {
   const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
@@ -127,7 +129,7 @@ export function ConfirmSignUpScreen({ email, onSuccess, onResend }: ConfirmSignU
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.footer}>Powered by PiLearn</Text>
+          <Text style={styles.footer}>Powered by PiResearch Labs</Text>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

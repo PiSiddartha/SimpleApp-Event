@@ -1,5 +1,7 @@
 // Event types
 
+export type EventVisibility = 'private' | 'global';
+
 export interface Event {
   id: string;
   name: string;
@@ -12,6 +14,7 @@ export interface Event {
   status: 'draft' | 'published' | 'ongoing' | 'completed' | 'cancelled';
   qr_code?: string;
   max_attendees?: number;
+  visibility?: EventVisibility;
   created_at: string;
 }
 
@@ -23,6 +26,19 @@ export interface CreateEventInput {
   start_time?: string;
   end_time?: string;
   max_attendees?: number;
+  visibility?: EventVisibility;
+}
+
+export interface UpdateEventInput {
+  name?: string;
+  description?: string;
+  location?: string;
+  event_type?: 'offline' | 'online' | 'hybrid';
+  start_time?: string;
+  end_time?: string;
+  status?: Event['status'];
+  max_attendees?: number;
+  visibility?: EventVisibility;
 }
 
 export interface EventAnalytics {

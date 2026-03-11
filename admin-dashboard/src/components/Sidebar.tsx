@@ -23,7 +23,7 @@ const menuItems = [
 ];
 
 export function Sidebar() {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? '';
 
   return (
     <aside className="w-56 shrink-0 border-r border-gray-200 bg-white">

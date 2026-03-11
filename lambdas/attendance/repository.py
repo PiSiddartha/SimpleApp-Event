@@ -7,13 +7,38 @@ import logging
 from typing import Optional, List
 
 from shared.db import execute_query
-from shared.models import Attendance, AttendanceRepository as IAttendanceRepository
+from shared.models import Attendance, Event, EventStatus, EventType, EventVisibility, AttendanceRepository as IAttendanceRepository
 
 logger = logging.getLogger(__name__)
 
 
 class AttendanceRepository(IAttendanceRepository):
     """Repository for attendance data operations."""
+
+    def get_event(self, event_id: str) -> Optional[Event]:
+        """Fetch the related event without importing the events lambda package."""
+        result = execute_query(
+            "SELECT * FROM events WHERE id = %s",
+            (event_id,),
+            fetch="one",
+        )
+        if not result:
+            return None
+        return Event(
+            id=result["id"],
+            name=result["name"],
+            description=result.get("description"),
+            location=result.get("location"),
+            event_type=EventType(result.get("event_type", "offline")),
+            start_time=result.get("start_time"),
+            end_time=result.get("end_time"),
+            created_by=result.get("created_by"),
+            status=EventStatus(result.get("status", "draft")),
+            qr_code=result.get("qr_code"),
+            max_attendees=result.get("max_attendees"),
+            visibility=EventVisibility(result.get("visibility", "global")),
+            created_at=result.get("created_at"),
+        )
     
     def get_by_event_and_user(self, event_id: str, user_id: str) -> Optional[Attendance]:
         """Get attendance record by event and user."""
@@ -57,7 +82,7 @@ class AttendanceRepository(IAttendanceRepository):
             """
             SELECT a.*, u.name as user_name, u.email as user_email
             FROM attendance a
-            JOIN users u ON a.user_id = u.cognito_id
+            LEFT JOIN users u ON a.user_id = u.id
             WHERE a.event_id = %s
             ORDER BY a.timestamp DESC
             """,

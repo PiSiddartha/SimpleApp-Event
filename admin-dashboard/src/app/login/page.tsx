@@ -15,7 +15,7 @@ function LoginForm() {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (searchParams.get('error') === 'access_denied') {
+    if (searchParams?.get('error') === 'access_denied') {
       setError('Access denied by API role policy. Please check your Cognito group membership.');
     }
   }, [searchParams]);

@@ -12,6 +12,7 @@ export interface Event {
   status: 'draft' | 'published' | 'ongoing' | 'completed' | 'cancelled';
   qr_code?: string;
   max_attendees?: number;
+  visibility?: 'global' | 'private';
   created_at: string;
 }
 

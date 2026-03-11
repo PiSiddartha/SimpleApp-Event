@@ -4,7 +4,7 @@ Data access for user operations.
 """
 
 import logging
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
 from shared.db import execute_query
 from shared.models import User, UserRole, UserRepository as IUserRepository
@@ -34,15 +34,34 @@ class UserRepository(IUserRepository):
         )
         
         return self._row_to_user(result) if result else None
-    
+
+    def get_by_cognito_ids(self, cognito_ids: List[str]) -> dict:
+        """Get users by Cognito IDs; returns dict cognito_id -> User for faster list enrichment."""
+        if not cognito_ids:
+            return {}
+        placeholders = ",".join(["%s"] * len(cognito_ids))
+        results = execute_query(
+            f"SELECT * FROM users WHERE cognito_id IN ({placeholders})",
+            tuple(cognito_ids),
+            fetch="all"
+        )
+        out = {}
+        for row in results or []:
+            user = self._row_to_user(row)
+            if user:
+                out[user.cognito_id] = user
+        return out
+
     def create(self, user: User) -> User:
         """Create a new user."""
         execute_query(
             """
             INSERT INTO users (
-                id, cognito_id, email, name, phone, company, role, created_at
+                id, cognito_id, email, name, phone, company, role,
+                user_type, university, course, year_of_study, city, state, designation,
+                created_at
             ) VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
             )
             """,
             (
@@ -53,6 +72,13 @@ class UserRepository(IUserRepository):
                 user.phone,
                 user.company,
                 user.role.value,
+                getattr(user, "user_type", None),
+                getattr(user, "university", None),
+                getattr(user, "course", None),
+                getattr(user, "year_of_study", None),
+                getattr(user, "city", None),
+                getattr(user, "state", None),
+                getattr(user, "designation", None),
                 user.created_at,
             ),
             fetch="none"
@@ -66,7 +92,9 @@ class UserRepository(IUserRepository):
         execute_query(
             """
             UPDATE users SET
-                name = %s, phone = %s, company = %s, role = %s
+                name = %s, phone = %s, company = %s, role = %s,
+                user_type = %s, university = %s, course = %s, year_of_study = %s,
+                city = %s, state = %s, designation = %s
             WHERE id = %s
             """,
             (
@@ -74,6 +102,13 @@ class UserRepository(IUserRepository):
                 user.phone,
                 user.company,
                 user.role.value,
+                getattr(user, "user_type", None),
+                getattr(user, "university", None),
+                getattr(user, "course", None),
+                getattr(user, "year_of_study", None),
+                getattr(user, "city", None),
+                getattr(user, "state", None),
+                getattr(user, "designation", None),
                 user.id,
             ),
             fetch="none"
@@ -107,6 +142,60 @@ class UserRepository(IUserRepository):
         )
         
         return self.create(user)
+
+    def upsert_profile(
+        self,
+        cognito_id: str,
+        email: str,
+        name: Optional[str] = None,
+        user_type: Optional[str] = None,
+        university: Optional[str] = None,
+        course: Optional[str] = None,
+        year_of_study: Optional[str] = None,
+        city: Optional[str] = None,
+        state: Optional[str] = None,
+        designation: Optional[str] = None,
+        company: Optional[str] = None,
+    ) -> User:
+        """Get or create user by cognito_id, then update profile fields."""
+        import uuid as uuid_mod
+        existing = self.get_by_cognito_id(cognito_id)
+        if existing:
+            if name is not None:
+                existing.name = name
+            if user_type is not None:
+                existing.user_type = user_type
+            if university is not None:
+                existing.university = university
+            if course is not None:
+                existing.course = course
+            if year_of_study is not None:
+                existing.year_of_study = year_of_study
+            if city is not None:
+                existing.city = city
+            if state is not None:
+                existing.state = state
+            if designation is not None:
+                existing.designation = designation
+            if company is not None:
+                existing.company = company
+            return self.update(existing)
+        user = User(
+            id=str(uuid_mod.uuid4()),
+            cognito_id=cognito_id,
+            email=email,
+            name=name,
+            role=UserRole.ATTENDEE,
+            user_type=user_type,
+            university=university,
+            course=course,
+            year_of_study=year_of_study,
+            city=city,
+            state=state,
+            designation=designation,
+            company=company,
+        )
+        return self.create(user)
     
     def _row_to_user(self, row: dict) -> User:
         """Convert database row to User model."""
@@ -118,5 +207,41 @@ class UserRepository(IUserRepository):
             phone=row.get("phone"),
             company=row.get("company"),
             role=UserRole(row.get("role", "attendee")),
+            user_type=row.get("user_type"),
+            university=row.get("university"),
+            course=row.get("course"),
+            year_of_study=row.get("year_of_study"),
+            city=row.get("city"),
+            state=row.get("state"),
+            designation=row.get("designation"),
             created_at=row.get("created_at"),
         )
+
+
+def get_or_create_user_from_claims(claims: Dict[str, Any]) -> Optional[User]:
+    """Resolve the authenticated Cognito user into the app DB user row."""
+    cognito_id = (claims.get("sub") or claims.get("cognito:username") or "").strip()
+    if not cognito_id:
+        return None
+
+    email = (
+        claims.get("email")
+        or claims.get("cognito:username")
+        or claims.get("username")
+        or ""
+    ).strip()
+    if not email:
+        return None
+
+    name = (
+        claims.get("name")
+        or " ".join(
+            part.strip()
+            for part in [claims.get("given_name") or "", claims.get("family_name") or ""]
+            if part and part.strip()
+        )
+        or None
+    )
+
+    repo = UserRepository()
+    return repo.get_or_create_from_cognito(cognito_id=cognito_id, email=email, name=name)

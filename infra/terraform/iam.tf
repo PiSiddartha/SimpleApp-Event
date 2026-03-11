@@ -130,6 +130,8 @@ resource "aws_iam_role_policy_attachment" "lambda_s3" {
 }
 
 # Cognito Access Policy
+# Use a constructed ARN (account + region) instead of aws_cognito_user_pool.main.arn to avoid a
+# cycle: User Pool -> Lambda -> attachment -> this policy -> User Pool.
 resource "aws_iam_policy" "lambda_cognito" {
   name = "${var.project_name}-lambda-cognito"
 
@@ -147,7 +149,7 @@ resource "aws_iam_policy" "lambda_cognito" {
           "cognito-idp:AdminCreateUser",
           "cognito-idp:AdminAddUserToGroup"
         ]
-        Resource = aws_cognito_user_pool.main.arn
+        Resource = "arn:aws:cognito-idp:${var.aws_region}:${data.aws_caller_identity.current.account_id}:userpool/*"
       }
     ]
   })

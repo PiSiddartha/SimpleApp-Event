@@ -3,6 +3,7 @@ import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Event } from '@/types/event';
 import { colors, spacing, borderRadius } from '@/theme/colors';
+import { formatCompactDateTimeInIst } from '@/utils/datetime';
 
 interface EventCardProps {
   event: Event;
@@ -10,16 +11,6 @@ interface EventCardProps {
 }
 
 export function EventCard({ event, onPress }: EventCardProps) {
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'TBD';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'ongoing': return '#22c55e';
@@ -57,7 +48,7 @@ export function EventCard({ event, onPress }: EventCardProps) {
       <View style={styles.footer}>
         <View style={styles.infoItem}>
           <Text style={styles.infoLabel}>Date</Text>
-          <Text style={styles.infoText}>{formatDate(event.start_time)}</Text>
+          <Text style={styles.infoText}>{formatCompactDateTimeInIst(event.start_time)} IST</Text>
         </View>
         {event.location ? (
           <View style={styles.infoItem}>

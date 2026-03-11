@@ -7,7 +7,7 @@ import logging
 from typing import Optional, List
 
 from shared.db import execute_query
-from shared.models import Event, EventStatus, EventType, EventRepository as IEventRepository
+from shared.models import Event, EventStatus, EventType, EventVisibility, EventRepository as IEventRepository
 
 logger = logging.getLogger(__name__)
 
@@ -30,14 +30,16 @@ class EventRepository(IEventRepository):
     
     def create(self, event: Event) -> Event:
         """Create a new event."""
+        vis = getattr(event, "visibility", None)
+        vis_val = vis.value if vis else EventVisibility.GLOBAL.value
         execute_query(
             """
             INSERT INTO events (
                 id, name, description, location, event_type,
                 start_time, end_time, created_by, status, qr_code, max_attendees,
-                created_at
+                visibility, created_at
             ) VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
             )
             """,
             (
@@ -52,6 +54,7 @@ class EventRepository(IEventRepository):
                 event.status.value,
                 event.qr_code,
                 event.max_attendees,
+                vis_val,
                 event.created_at,
             ),
             fetch="none"
@@ -62,24 +65,33 @@ class EventRepository(IEventRepository):
     
     def update(self, event: Event) -> Event:
         """Update an existing event."""
+        vis = getattr(event, "visibility", None)
+        def _enum_or_str(val, default: str) -> str:
+            v = getattr(val, "value", None) or (val.lower() if isinstance(val, str) else None) or default
+            return v.lower() if isinstance(v, str) else v
+
+        vis_val = _enum_or_str(vis, EventVisibility.GLOBAL.value)
+        event_type_val = _enum_or_str(event.event_type, EventType.OFFLINE.value)
+        status_val = _enum_or_str(event.status, EventStatus.DRAFT.value)
         execute_query(
             """
             UPDATE events SET
                 name = %s, description = %s, location = %s,
                 event_type = %s, start_time = %s, end_time = %s,
-                status = %s, qr_code = %s, max_attendees = %s
+                status = %s, qr_code = %s, max_attendees = %s, visibility = %s
             WHERE id = %s
             """,
             (
                 event.name,
                 event.description,
                 event.location,
-                event.event_type.value if event.event_type else EventType.OFFLINE.value,
+                event_type_val,
                 event.start_time,
                 event.end_time,
-                event.status.value,
+                status_val,
                 event.qr_code,
                 event.max_attendees,
+                vis_val,
                 event.id,
             ),
             fetch="none"
@@ -99,18 +111,29 @@ class EventRepository(IEventRepository):
         logger.info(f"Deleted event: {event_id}")
         return True
     
-    def get_all_events(self, limit: int = 50) -> List[Event]:
-        """Get all events."""
-        results = execute_query(
-            """
-            SELECT * FROM events 
-            ORDER BY created_at DESC 
-            LIMIT %s
-            """,
-            (limit,),
-            fetch="all"
-        )
-        
+    def get_all_events(self, limit: int = 50, visibility: Optional[str] = None) -> List[Event]:
+        """Get all events, optionally filtered by visibility (e.g. 'global' for public list)."""
+        if visibility and visibility in ("global", "private"):
+            results = execute_query(
+                """
+                SELECT * FROM events
+                WHERE visibility = %s
+                ORDER BY created_at DESC
+                LIMIT %s
+                """,
+                (visibility, limit),
+                fetch="all"
+            )
+        else:
+            results = execute_query(
+                """
+                SELECT * FROM events
+                ORDER BY created_at DESC
+                LIMIT %s
+                """,
+                (limit,),
+                fetch="all"
+            )
         return [self._row_to_event(row) for row in results]
     
     def list_by_organizer(self, organizer_id: str, limit: int = 50) -> List[Event]:
@@ -159,6 +182,11 @@ class EventRepository(IEventRepository):
     
     def _row_to_event(self, row: dict) -> Event:
         """Convert database row to Event model."""
+        vis = row.get("visibility", "global")
+        try:
+            visibility = EventVisibility(vis) if vis else EventVisibility.GLOBAL
+        except ValueError:
+            visibility = EventVisibility.GLOBAL
         return Event(
             id=row["id"],
             name=row["name"],
@@ -171,5 +199,6 @@ class EventRepository(IEventRepository):
             status=EventStatus(row.get("status", "draft")),
             qr_code=row.get("qr_code"),
             max_attendees=row.get("max_attendees"),
+            visibility=visibility,
             created_at=row.get("created_at"),
         )

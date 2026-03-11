@@ -21,6 +21,7 @@ import { Poll } from '@/types/poll';
 import { Material } from '@/types/material';
 import { api } from '@/services/api';
 import { colors, spacing, borderRadius } from '@/theme/colors';
+import { formatDateTimeInIst } from '@/utils/datetime';
 
 interface EventScreenProps {
   eventId: string;
@@ -36,6 +37,9 @@ export function EventScreen({ eventId, onBack, onPollPress }: EventScreenProps) 
   const { data: analytics } = useEventAnalytics(eventId);
   const [joined, setJoined] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [selectedPollOptions, setSelectedPollOptions] = useState<Record<string, string | null>>({});
+  const [submittedPollOptions, setSubmittedPollOptions] = useState<Record<string, string | null>>({});
+  const [submittingPollId, setSubmittingPollId] = useState<string | null>(null);
 
   const polls = Array.isArray(pollsData) ? pollsData : pollsData?.polls || [];
   const materials = Array.isArray(materialsData) ? materialsData : materialsData?.materials || [];
@@ -56,27 +60,37 @@ export function EventScreen({ eventId, onBack, onPollPress }: EventScreenProps) 
     }
   };
 
-  const handleVote = (poll: Poll) => {
+  const handlePollOptionSelect = (poll: Poll, optionId: string) => {
+    setSelectedPollOptions((current) => ({
+      ...current,
+      [poll.id]: optionId,
+    }));
+  };
+
+  const handleVote = async (poll: Poll) => {
+    const optionId = selectedPollOptions[poll.id];
+    if (!optionId) {
+      Alert.alert('Choose an answer', 'Select one option before submitting.');
+      return;
+    }
+
     if (onPollPress) {
       onPollPress(poll.id);
-    } else {
-      const buttons =
-        poll.options?.map((option) => ({
-          text: option.option_text,
-          onPress: async () => {
-            try {
-              await api.castVote(poll.id, option.id);
-              Alert.alert('Success', 'Your vote has been recorded!');
-            } catch {
-              Alert.alert('Error', 'Failed to submit vote');
-            }
-          },
-        })) ?? [];
-      Alert.alert(
-        poll.question,
-        'Select an option to vote',
-        buttons.length > 0 ? buttons : [{ text: 'OK' }]
-      );
+      return;
+    }
+
+    setSubmittingPollId(poll.id);
+    try {
+      await api.castVote(poll.id, optionId);
+      setSubmittedPollOptions((current) => ({
+        ...current,
+        [poll.id]: optionId,
+      }));
+      Alert.alert('Success', 'Your answer has been recorded.');
+    } catch {
+      Alert.alert('Error', 'Failed to submit your answer.');
+    } finally {
+      setSubmittingPollId(null);
     }
   };
 
@@ -122,17 +136,6 @@ export function EventScreen({ eventId, onBack, onPollPress }: EventScreenProps) 
     );
   }
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'TBD';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -153,7 +156,7 @@ export function EventScreen({ eventId, onBack, onPollPress }: EventScreenProps) 
           <View style={styles.infoRow}>
             <Ionicons name="calendar-outline" size={18} color={colors.textMuted} />
             <Text style={styles.infoLabel}>Date</Text>
-            <Text style={styles.infoText}>{formatDate(event.start_time)}</Text>
+            <Text style={styles.infoText}>{formatDateTimeInIst(event.start_time)} IST</Text>
           </View>
           {event.location ? (
             <View style={styles.infoRow}>
@@ -207,7 +210,11 @@ export function EventScreen({ eventId, onBack, onPollPress }: EventScreenProps) 
               <PollCard 
                 key={poll.id} 
                 poll={poll} 
-                onVote={handleVote} 
+                onSelectOption={handlePollOptionSelect}
+                onSubmitAnswer={handleVote}
+                selectedOptionId={selectedPollOptions[poll.id]}
+                submittedOptionId={submittedPollOptions[poll.id]}
+                isSubmitting={submittingPollId === poll.id}
               />
             ))
           ) : (

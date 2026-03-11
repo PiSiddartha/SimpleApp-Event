@@ -2,7 +2,24 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import { authService } from './auth';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://ggszk3v52a.execute-api.ap-south-1.amazonaws.com';
+export type MyProfile = {
+  id: string;
+  cognito_id?: string;
+  email: string;
+  name?: string;
+  user_type?: 'student' | 'professional';
+  university?: string;
+  course?: string;
+  year_of_study?: string;
+  city?: string;
+  state?: string;
+  designation?: string;
+  company?: string;
+  access_role?: string;
+};
+
+const rawUrl = process.env.EXPO_PUBLIC_API_URL || 'https://ggszk3v52a.execute-api.ap-south-1.amazonaws.com';
+const API_URL = rawUrl.replace(/\/api\/?$/, '');
 
 class ApiService {
   private client: AxiosInstance;
@@ -49,9 +66,9 @@ class ApiService {
     );
   }
 
-  // Events
-  async getEvents() {
-    const response = await this.client.get('/events');
+  // Events (optionally filter by visibility: 'global' for public list, omit for all)
+  async getEvents(params?: { visibility?: string }) {
+    const response = await this.client.get('/events', { params });
     const raw = response.data;
     return Array.isArray(raw) ? raw : raw?.data ?? raw?.events ?? [];
   }
@@ -65,6 +82,12 @@ class ApiService {
   async joinEvent(eventId: string) {
     const response = await this.client.post(`/events/${eventId}/join`);
     return response.data;
+  }
+
+  async getAttendance() {
+    const response = await this.client.get('/attendance');
+    const raw = response.data;
+    return Array.isArray(raw) ? raw : raw?.attendance ?? raw?.data ?? [];
   }
 
   // Polls
@@ -108,6 +131,27 @@ class ApiService {
   // Analytics
   async getEventAnalytics(eventId: string) {
     const response = await this.client.get(`/events/${eventId}/analytics`);
+    return response.data;
+  }
+
+  // User profile (after sign-up completion)
+  async updateMyProfile(payload: {
+    name?: string;
+    user_type: 'student' | 'professional';
+    university?: string;
+    course?: string;
+    year_of_study?: string;
+    city?: string;
+    state?: string;
+    designation?: string;
+    company?: string;
+  }) {
+    const response = await this.client.put('/users/me', payload);
+    return response.data;
+  }
+
+  async getMyProfile(): Promise<MyProfile> {
+    const response = await this.client.get('/users/me');
     return response.data;
   }
 }

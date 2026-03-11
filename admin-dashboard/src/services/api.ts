@@ -162,7 +162,7 @@ class ApiService {
     return response.data;
   }
 
-  async getUsers(group = 'Students') {
+  async getUsers(group = 'All') {
     const response = await this.client.get('/users', { params: { group } });
     const raw = response.data;
     return {

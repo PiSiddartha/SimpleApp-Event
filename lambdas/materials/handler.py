@@ -16,6 +16,16 @@ def _extract_material_id(path: str) -> str:
     return parts[2] if len(parts) >= 3 else ""
 
 
+def _load_json_body(event: Dict[str, Any]) -> Dict[str, Any]:
+    body = event.get("body", "{}") or "{}"
+    if isinstance(body, dict):
+        return body
+    try:
+        return json.loads(body)
+    except json.JSONDecodeError as exc:
+        raise ValueError("Invalid JSON body") from exc
+
+
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     """Main Lambda handler for materials."""
     try:
@@ -60,15 +70,22 @@ def create_material(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     POST /materials
     """
     from materials.service import MaterialService
+    from shared.user_repository import get_or_create_user_from_claims
     
-    body = json.loads(event.get("body", "{}"))
+    try:
+        body = _load_json_body(event)
+    except ValueError as exc:
+        return create_error_response(400, str(exc))
+    app_user = get_or_create_user_from_claims(event.get("user", {}))
+    if not app_user:
+        return create_error_response(400, "Authenticated user profile could not be resolved")
     
     service = MaterialService()
     result = service.create_material(
         event_id=body.get("event_id"),
         title=body.get("title"),
         file_type=body.get("file_type"),
-        uploaded_by=None,
+        uploaded_by=app_user.id,
     )
     
     if not result:
@@ -144,13 +161,14 @@ def get_download_url(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     POST /materials/{material_id}/download
     """
     from materials.service import MaterialService
+    from shared.user_repository import get_or_create_user_from_claims
 
     material_id = _extract_material_id(event.get("path", ""))
     if not material_id:
         return create_error_response(400, "material_id is required")
     
-    user = event.get("user", {})
-    user_id = user.get("sub") or user.get("cognito:username")
+    app_user = get_or_create_user_from_claims(event.get("user", {}))
+    user_id = app_user.id if app_user else None
     
     service = MaterialService()
     result = service.get_download_url(material_id, user_id)

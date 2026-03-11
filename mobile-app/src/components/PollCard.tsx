@@ -7,11 +7,24 @@ import { colors, spacing, borderRadius } from '@/theme/colors';
 
 interface PollCardProps {
   poll: Poll;
-  onVote: (poll: Poll) => void;
+  onSelectOption: (poll: Poll, optionId: string) => void;
+  onSubmitAnswer: (poll: Poll) => void;
+  selectedOptionId?: string | null;
+  submittedOptionId?: string | null;
+  isSubmitting?: boolean;
 }
 
-export function PollCard({ poll, onVote }: PollCardProps) {
+export function PollCard({
+  poll,
+  onSelectOption,
+  onSubmitAnswer,
+  selectedOptionId,
+  submittedOptionId,
+  isSubmitting = false,
+}: PollCardProps) {
   const isActive = (poll?.status ?? '') === 'active';
+  const effectiveSelectedOptionId = submittedOptionId ?? selectedOptionId ?? null;
+  const hasSubmitted = !!submittedOptionId;
 
   return (
     <View style={styles.card}>
@@ -26,28 +39,64 @@ export function PollCard({ poll, onVote }: PollCardProps) {
 
       <View style={styles.options}>
         {(poll?.options ?? []).map((option: PollOption) => (
+          (() => {
+            const isSelected = effectiveSelectedOptionId === option.id;
+            return (
           <TouchableOpacity
             key={option.id}
-            style={[styles.optionButton, !isActive && styles.optionButtonDisabled]}
-            onPress={() => onVote(poll)}
-            disabled={!isActive}
+            style={[
+              styles.optionButton,
+              !isActive && styles.optionButtonDisabled,
+              isSelected && styles.optionButtonSelected,
+              hasSubmitted && styles.optionButtonSubmitted,
+            ]}
+            onPress={() => onSelectOption(poll, option.id)}
+            disabled={!isActive || hasSubmitted || isSubmitting}
             activeOpacity={0.7}
           >
-            <Text style={styles.optionText}>{option.option_text}</Text>
+            <View style={styles.optionContent}>
+              <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
+                {option.option_text}
+              </Text>
+              {isSelected ? (
+                <Ionicons
+                  name={hasSubmitted ? 'checkmark-circle' : 'radio-button-on'}
+                  size={20}
+                  color={hasSubmitted ? colors.success : colors.primary}
+                />
+              ) : null}
+            </View>
           </TouchableOpacity>
+            );
+          })()
         ))}
       </View>
 
-      {isActive && (
+      {hasSubmitted ? (
+        <View style={styles.submittedBanner}>
+          <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+          <Text style={styles.submittedText}>You selected this option.</Text>
+        </View>
+      ) : isActive ? (
         <TouchableOpacity
-          style={styles.voteButton}
-          onPress={() => onVote(poll)}
+          style={[
+            styles.voteButton,
+            (!selectedOptionId || isSubmitting) && styles.voteButtonDisabled,
+          ]}
+          onPress={() => onSubmitAnswer(poll)}
+          disabled={!selectedOptionId || isSubmitting}
           activeOpacity={0.85}
         >
-          <Ionicons name="checkmark-done-outline" size={20} color={colors.white} />
-          <Text style={styles.voteButtonText}>Submit vote</Text>
+          <Ionicons
+            name={isSubmitting ? 'time-outline' : 'checkmark-done-outline'}
+            size={20}
+            color={colors.white}
+          />
+          <Text style={styles.voteButtonText}>
+            {isSubmitting ? 'Submitting...' : 'Submit answer'}
+          </Text>
         </TouchableOpacity>
-      )}
+      ) : null}
     </View>
   );
 }
@@ -98,13 +147,32 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.background,
   },
+  optionButtonSelected: {
+    borderColor: colors.primary,
+    backgroundColor: `${colors.primary}10`,
+  },
+  optionButtonSubmitted: {
+    borderColor: colors.success,
+    backgroundColor: colors.successBg,
+  },
   optionButtonDisabled: {
     opacity: 0.6,
+  },
+  optionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
   },
   optionText: {
     fontSize: 15,
     color: colors.text,
     textAlign: 'center',
+    flex: 1,
+  },
+  optionTextSelected: {
+    color: colors.text,
+    fontWeight: '600',
   },
   voteButton: {
     flexDirection: 'row',
@@ -117,9 +185,27 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: colors.primary,
   },
+  voteButtonDisabled: {
+    backgroundColor: colors.textMuted,
+  },
   voteButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.white,
+  },
+  submittedBanner: {
+    marginTop: spacing.lg,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: 12,
+    backgroundColor: colors.successBg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  submittedText: {
+    color: colors.success,
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

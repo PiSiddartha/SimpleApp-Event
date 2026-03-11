@@ -7,7 +7,8 @@ import {
   StyleSheet, 
   SafeAreaView,
   TouchableOpacity,
-  ActivityIndicator 
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useEvents } from '@/hooks/useEvents';
@@ -22,7 +23,13 @@ interface HomeScreenProps {
 }
 
 export function HomeScreen({ onEventPress, onScanPress, onProfilePress }: HomeScreenProps) {
-  const { data: events, isLoading, error } = useEvents();
+  const {
+    data: events,
+    isLoading,
+    error,
+    refetch,
+    isRefetching,
+  } = useEvents('global');
   
   const renderEvent = ({ item }: { item: Event }) => (
     <EventCard 
@@ -82,6 +89,16 @@ export function HomeScreen({ onEventPress, onScanPress, onProfilePress }: HomeSc
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={() => {
+                refetch();
+              }}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No upcoming events</Text>

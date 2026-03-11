@@ -13,6 +13,47 @@ logger = logging.getLogger(__name__)
 
 class AnalyticsRepository:
     """Repository for analytics data operations."""
+
+    def event_exists(self, event_id: str) -> bool:
+        """Return whether the target event exists."""
+        result = execute_query(
+            "SELECT id FROM events WHERE id = %s",
+            (event_id,),
+            fetch="one"
+        )
+        return bool(result)
+
+    def get_event_owner_id(self, event_id: str) -> Optional[str]:
+        """Return the creator user id for an event."""
+        result = execute_query(
+            "SELECT created_by FROM events WHERE id = %s",
+            (event_id,),
+            fetch="one"
+        )
+        return result["created_by"] if result else None
+
+    def is_event_attendee(self, event_id: str, user_id: str) -> bool:
+        """Return whether the given app user has joined the event."""
+        result = execute_query(
+            """
+            SELECT id
+            FROM attendance
+            WHERE event_id = %s AND user_id = %s
+            LIMIT 1
+            """,
+            (event_id, user_id),
+            fetch="one"
+        )
+        return bool(result)
+
+    def user_exists(self, user_id: str) -> bool:
+        """Return whether the target user exists."""
+        result = execute_query(
+            "SELECT id FROM users WHERE id = %s",
+            (user_id,),
+            fetch="one"
+        )
+        return bool(result)
     
     def get_attendance_count(self, event_id: str) -> int:
         """Get attendance count for an event."""
