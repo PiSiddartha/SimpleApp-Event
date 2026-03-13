@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, spacing, borderRadius } from '@/theme/colors';
@@ -23,45 +24,39 @@ interface ProfileScreenProps {
 export function ProfileScreen({ onBack, onLogout, onEditProfile }: ProfileScreenProps) {
   const [user, setUser] = useState<StoredUserData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const loadProfile = React.useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    try {
+      const profile = await api.getMyProfile();
+      const nextUser: StoredUserData = {
+        id: profile.id,
+        email: profile.email,
+        name: profile.name,
+        user_type: profile.user_type,
+        university: profile.university,
+        course: profile.course,
+        year_of_study: profile.year_of_study,
+        city: profile.city,
+        state: profile.state,
+        designation: profile.designation,
+        company: profile.company,
+      };
+      await authService.updateStoredUserData(nextUser);
+      setUser(nextUser);
+    } catch (_) {
+      const res = await authService.getCurrentUser();
+      setUser(res.success ? res.user : null);
+    } finally {
+      setLoading(false);
+      if (isRefresh) setRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
-    let mounted = true;
-    const loadProfile = async () => {
-      try {
-        const profile = await api.getMyProfile();
-        const nextUser: StoredUserData = {
-          id: profile.id,
-          email: profile.email,
-          name: profile.name,
-          user_type: profile.user_type,
-          university: profile.university,
-          course: profile.course,
-          year_of_study: profile.year_of_study,
-          city: profile.city,
-          state: profile.state,
-          designation: profile.designation,
-          company: profile.company,
-        };
-        await authService.updateStoredUserData(nextUser);
-        if (mounted) {
-          setUser(nextUser);
-        }
-        return;
-      } catch (_) {
-        const res = await authService.getCurrentUser();
-        if (mounted) {
-          setUser(res.success ? res.user : null);
-        }
-      } finally {
-        if (mounted) {
-          setLoading(false);
-        }
-      }
-    };
-
     loadProfile();
-    return () => { mounted = false; };
-  }, []);
+  }, [loadProfile]);
 
   if (loading) {
     return (
@@ -105,7 +100,18 @@ export function ProfileScreen({ onBack, onLogout, onEditProfile }: ProfileScreen
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => loadProfile(true)}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+      >
         <View style={styles.heroCard}>
           <View style={styles.heroGlow} />
           <View style={styles.avatarWrap}>

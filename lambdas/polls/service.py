@@ -36,9 +36,13 @@ class PollService:
         question: str,
         options: List[str],
         created_by: Optional[str] = None,
+        material_id: Optional[str] = None,
+        correct_option_index: Optional[int] = None,
     ) -> Optional[Dict[str, Any]]:
         """
         Create a new poll with options.
+        
+        correct_option_index: 0-based index of the correct option for MCQ; optional.
         
         Returns:
             Dict with poll_id if successful, None if failed
@@ -51,6 +55,9 @@ class PollService:
         if not event_id or not execute_query("SELECT id FROM events WHERE id = %s", (event_id,), fetch="one"):
             logger.warning("Cannot create poll for missing event: %s", event_id)
             return None
+        if correct_option_index is not None and (correct_option_index < 0 or correct_option_index >= len(options)):
+            logger.warning("correct_option_index out of range: %s", correct_option_index)
+            return None
         
         # Create poll
         poll = Poll(
@@ -59,16 +66,19 @@ class PollService:
             question=question,
             created_by=created_by,
             status=PollStatus.ACTIVE,  # Auto-activate for now
+            material_id=material_id,
         )
         
         poll = self.poll_repo.create_poll(poll)
         
-        # Create options
-        for option_text in options:
+        # Create options (mark one as correct if correct_option_index provided)
+        for i, option_text in enumerate(options):
+            is_correct = (correct_option_index is not None and i == correct_option_index)
             option = PollOption(
                 id=str(uuid.uuid4()),
                 poll_id=poll.id,
                 option_text=option_text,
+                is_correct=is_correct,
             )
             self.option_repo.create(option)
         
@@ -138,8 +148,10 @@ class PollService:
         for option in options:
             vote_count = self.vote_repo.count_by_option(option.id)
             results.append({
+                "option_id": option.id,
                 "option": option.option_text,
                 "votes": vote_count,
+                "is_correct": option.is_correct,
             })
         
         return {
@@ -208,13 +220,19 @@ class PollService:
         )
         self.vote_repo.create_vote(vote)
         
-        # Track engagement event
+        # Resolve correct option for engagement scoring
+        poll_options = self.option_repo.get_options(poll_id)
+        correct_option_id = next((o.id for o in poll_options if o.is_correct), None)
+        is_correct = (correct_option_id is not None and option_id == correct_option_id)
+        
+        # Track engagement event (with is_correct for leaderboard scoring)
         try:
             self.engagement_service.track_vote(
                 user_id=user_id,
                 event_id=poll.event_id,
                 poll_id=poll_id,
-                option_id=option_id
+                option_id=option_id,
+                is_correct=is_correct,
             )
         except Exception as e:
             logger.warning(f"Failed to track engagement: {e}")

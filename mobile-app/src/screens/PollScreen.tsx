@@ -1,14 +1,15 @@
 // Poll Screen
 import React from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  StyleSheet, 
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
   SafeAreaView,
   TouchableOpacity,
   ActivityIndicator,
-  Alert 
+  Alert,
+  RefreshControl,
 } from 'react-native';
 import { usePoll, usePollResults, useCastVote } from '@/hooks/usePolls';
 import { api } from '@/services/api';
@@ -21,9 +22,14 @@ interface PollScreenProps {
 }
 
 export function PollScreen({ pollId, onBack }: PollScreenProps) {
-  const { data: poll, isLoading: pollLoading } = usePoll(pollId);
-  const { data: results, isLoading: resultsLoading, refetch } = usePollResults(pollId);
+  const { data: poll, isLoading: pollLoading, refetch: refetchPoll, isRefetching: pollRefetching } = usePoll(pollId);
+  const { data: results, isLoading: resultsLoading, refetch: refetchResults, isRefetching: resultsRefetching } = usePollResults(pollId);
   const castVote = useCastVote();
+  const isRefreshing = pollRefetching || resultsRefetching;
+  const onRefresh = () => {
+    refetchPoll();
+    refetchResults();
+  };
 
   const handleVote = async (optionId: string) => {
     try {
@@ -63,7 +69,17 @@ export function PollScreen({ pollId, onBack }: PollScreenProps) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+      >
         <View style={styles.header}>
           <TouchableOpacity onPress={onBack} style={styles.backButton}>
             <Text style={styles.backText}>← Back</Text>

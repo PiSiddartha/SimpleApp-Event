@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   RefreshControl,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useCourses } from '@/hooks/useCourses';
@@ -19,6 +20,18 @@ interface CoursesScreenProps {
   onCoursePress: (course: Course) => void;
 }
 
+const cardShadow = Platform.select({
+  ios: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+  },
+  android: {
+    elevation: 3,
+  },
+});
+
 export function CoursesScreen({ onCoursePress }: CoursesScreenProps) {
   const { data: courses, isLoading, error, refetch, isRefetching } = useCourses();
   const list = Array.isArray(courses) ? courses : [];
@@ -27,10 +40,10 @@ export function CoursesScreen({ onCoursePress }: CoursesScreenProps) {
     <TouchableOpacity
       style={styles.card}
       onPress={() => onCoursePress(item)}
-      activeOpacity={0.7}
+      activeOpacity={0.65}
     >
       <View style={styles.cardIcon}>
-        <Ionicons name="book-outline" size={28} color={colors.primary} />
+        <Ionicons name="book-outline" size={26} color={colors.primary} />
       </View>
       <View style={styles.cardContent}>
         <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
@@ -38,7 +51,9 @@ export function CoursesScreen({ onCoursePress }: CoursesScreenProps) {
           <Text style={styles.description} numberOfLines={2}>{item.short_description}</Text>
         ) : null}
       </View>
-      <Ionicons name="chevron-forward" size={22} color={colors.textMuted} />
+      <View style={styles.chevronWrap}>
+        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+      </View>
     </TouchableOpacity>
   );
 
@@ -46,7 +61,7 @@ export function CoursesScreen({ onCoursePress }: CoursesScreenProps) {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.greeting}>Courses</Text>
-        <Text style={styles.subtitle}>Browse and register for Py Research Labs programs</Text>
+        <Text style={styles.subtitle}>Browse and register for Pi Research Labs programs</Text>
       </View>
 
       {isLoading ? (
@@ -60,7 +75,9 @@ export function CoursesScreen({ onCoursePress }: CoursesScreenProps) {
         </View>
       ) : list.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Ionicons name="book-outline" size={56} color={colors.textMuted} />
+          <View style={styles.emptyIconWrap}>
+            <Ionicons name="book-outline" size={48} color={colors.textMuted} />
+          </View>
           <Text style={styles.emptyTitle}>No courses yet</Text>
           <Text style={styles.emptyMessage}>Published courses will appear here.</Text>
         </View>
@@ -91,25 +108,27 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
   },
   header: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.lg,
   },
   greeting: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '700',
     color: colors.text,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 15,
     color: colors.textSecondary,
-    marginTop: 4,
+    marginTop: spacing.xs,
+    lineHeight: 22,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.lg,
   },
   loadingText: {
     fontSize: 15,
@@ -131,40 +150,52 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.xxl,
   },
+  emptyIconWrap: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: colors.border + '80',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+  },
   emptyTitle: {
     fontSize: 18,
     fontWeight: '600',
     color: colors.text,
-    marginTop: spacing.lg,
   },
   emptyMessage: {
     fontSize: 14,
     color: colors.textSecondary,
     marginTop: spacing.sm,
     textAlign: 'center',
+    lineHeight: 20,
+    paddingHorizontal: spacing.xl,
   },
   list: {
-    padding: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
     paddingBottom: spacing.xxl * 2,
   },
   card: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.backgroundCard,
-    borderRadius: borderRadius.xl,
+    borderRadius: borderRadius.xl + 2,
     padding: spacing.lg,
     marginBottom: spacing.md,
     borderWidth: 1,
     borderColor: colors.border,
+    ...cardShadow,
   },
   cardIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.primary + '18',
+    width: 52,
+    height: 52,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.primary + '14',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: spacing.md,
+    marginRight: spacing.lg,
   },
   cardContent: {
     flex: 1,
@@ -174,10 +205,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: colors.text,
+    lineHeight: 22,
   },
   description: {
     fontSize: 14,
     color: colors.textSecondary,
-    marginTop: 4,
+    marginTop: spacing.xs,
+    lineHeight: 20,
+  },
+  chevronWrap: {
+    padding: spacing.sm,
+    marginLeft: spacing.xs,
   },
 });

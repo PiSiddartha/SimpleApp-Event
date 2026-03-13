@@ -9,11 +9,25 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Platform,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useCourse, useRegisterCourse } from '@/hooks/useCourses';
 import { colors, spacing, borderRadius } from '@/theme/colors';
 import type { CoursePhase } from '@/types/course';
+
+const cardShadow = Platform.select({
+  ios: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+  },
+  android: {
+    elevation: 2,
+  },
+});
 
 interface CourseDetailScreenProps {
   courseId: string;
@@ -21,7 +35,7 @@ interface CourseDetailScreenProps {
 }
 
 export function CourseDetailScreen({ courseId, onBack }: CourseDetailScreenProps) {
-  const { data: course, isLoading, error } = useCourse(courseId);
+  const { data: course, isLoading, error, refetch, isRefetching } = useCourse(courseId);
   const registerCourse = useRegisterCourse();
   const [registered, setRegistered] = useState(false);
 
@@ -80,7 +94,7 @@ export function CourseDetailScreen({ courseId, onBack }: CourseDetailScreenProps
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backBtn}>
+        <TouchableOpacity onPress={onBack} style={styles.backBtn} activeOpacity={0.7}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>{course.title}</Text>
@@ -90,13 +104,25 @@ export function CourseDetailScreen({ courseId, onBack }: CourseDetailScreenProps
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={() => refetch()}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
       >
-        {course.short_description ? (
-          <Text style={styles.shortDesc}>{course.short_description}</Text>
-        ) : null}
-        {course.full_description ? (
-          <Text style={styles.fullDesc}>{course.full_description}</Text>
-        ) : null}
+        {(course.short_description || course.full_description) && (
+          <View style={styles.introBlock}>
+            {course.short_description ? (
+              <Text style={styles.shortDesc}>{course.short_description}</Text>
+            ) : null}
+            {course.full_description ? (
+              <Text style={styles.fullDesc}>{course.full_description}</Text>
+            ) : null}
+          </View>
+        )}
 
         {highlights.length > 0 && (
           <View style={styles.section}>
@@ -134,41 +160,49 @@ export function CourseDetailScreen({ courseId, onBack }: CourseDetailScreenProps
         {benefits.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Benefits</Text>
-            {benefits.map((b: { title: string; description?: string }, i: number) => (
-              <View key={i} style={styles.bulletItem}>
-                <Text style={styles.bulletTitle}>{b.title}</Text>
-                {b.description ? <Text style={styles.bulletDesc}>{b.description}</Text> : null}
-              </View>
-            ))}
+            <View style={styles.benefitsCard}>
+              {benefits.map((b: { title: string; description?: string }, i: number) => (
+                <View key={i} style={styles.bulletItem}>
+                  <Text style={styles.bulletTitle}>{b.title}</Text>
+                  {b.description ? <Text style={styles.bulletDesc}>{b.description}</Text> : null}
+                </View>
+              ))}
+            </View>
           </View>
         )}
 
         {audience.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Who should attend</Text>
-            {audience.map((a: { title: string; description?: string }, i: number) => (
-              <View key={i} style={styles.bulletItem}>
-                <Text style={styles.bulletTitle}>{a.title}</Text>
-                {a.description ? <Text style={styles.bulletDesc}>{a.description}</Text> : null}
-              </View>
-            ))}
+            <View style={styles.benefitsCard}>
+              {audience.map((a: { title: string; description?: string }, i: number) => (
+                <View key={i} style={styles.bulletItem}>
+                  <Text style={styles.bulletTitle}>{a.title}</Text>
+                  {a.description ? <Text style={styles.bulletDesc}>{a.description}</Text> : null}
+                </View>
+              ))}
+            </View>
           </View>
         )}
 
         {careerOutcomes.length > 0 && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Career outcomes</Text>
-            {careerOutcomes.map((c: { text: string }, i: number) => (
-              <Text key={i} style={styles.bulletText}>• {c.text}</Text>
-            ))}
+            <View style={styles.outcomesCard}>
+              {careerOutcomes.map((c: { text: string }, i: number) => (
+                <Text key={i} style={styles.bulletText}>• {c.text}</Text>
+              ))}
+            </View>
           </View>
         )}
 
         {certificate && (certificate.title || certificate.provider) && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Certificate</Text>
-            {certificate.title ? <Text style={styles.bulletTitle}>{certificate.title}</Text> : null}
-            {certificate.provider ? <Text style={styles.bulletDesc}>Provider: {certificate.provider}</Text> : null}
+            <View style={styles.certCard}>
+              {certificate.title ? <Text style={styles.bulletTitle}>{certificate.title}</Text> : null}
+              {certificate.provider ? <Text style={styles.bulletDesc}>Provider: {certificate.provider}</Text> : null}
+            </View>
           </View>
         )}
 
@@ -183,7 +217,7 @@ export function CourseDetailScreen({ courseId, onBack }: CourseDetailScreenProps
               style={styles.registerBtn}
               onPress={handleRegister}
               disabled={registerCourse.isPending}
-              activeOpacity={0.8}
+              activeOpacity={0.75}
             >
               {registerCourse.isPending ? (
                 <ActivityIndicator size="small" color={colors.white} />
@@ -211,27 +245,29 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.sm,
     paddingVertical: spacing.md,
+    paddingTop: spacing.lg,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     backgroundColor: colors.backgroundCard,
   },
   backBtn: {
     padding: spacing.sm,
-    marginRight: spacing.sm,
+    marginRight: spacing.xs,
   },
   headerTitle: {
     flex: 1,
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '700',
     color: colors.text,
+    letterSpacing: -0.3,
   },
   loadingWrap: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.lg,
   },
   loadingText: {
     fontSize: 15,
@@ -254,26 +290,29 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     paddingBottom: spacing.xxl,
   },
+  introBlock: {
+    marginBottom: spacing.xl,
+  },
   shortDesc: {
     fontSize: 16,
     color: colors.textSecondary,
+    lineHeight: 24,
     marginBottom: spacing.md,
-    lineHeight: 22,
   },
   fullDesc: {
     fontSize: 15,
     color: colors.text,
-    lineHeight: 22,
-    marginBottom: spacing.xl,
+    lineHeight: 24,
   },
   section: {
-    marginBottom: spacing.xl,
+    marginBottom: spacing.xxl,
   },
   sectionTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '700',
     color: colors.text,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
+    letterSpacing: -0.2,
   },
   highlightGrid: {
     flexDirection: 'row',
@@ -282,70 +321,108 @@ const styles = StyleSheet.create({
   },
   highlightItem: {
     minWidth: '45%',
-    padding: spacing.md,
+    flex: 1,
+    padding: spacing.lg,
     backgroundColor: colors.backgroundCard,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.lg,
     borderWidth: 1,
     borderColor: colors.border,
+    ...cardShadow,
   },
   highlightLabel: {
     fontSize: 12,
     color: colors.textMuted,
-    marginBottom: 2,
+    marginBottom: spacing.xs,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
   highlightValue: {
     fontSize: 15,
     fontWeight: '600',
     color: colors.text,
+    lineHeight: 20,
   },
   phaseCard: {
-    padding: spacing.md,
+    padding: spacing.lg,
+    paddingLeft: spacing.lg + 2,
     backgroundColor: colors.backgroundCard,
-    borderRadius: borderRadius.md,
-    borderLeftWidth: 3,
+    borderRadius: borderRadius.lg,
+    borderLeftWidth: 4,
     borderLeftColor: colors.primary,
     marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...cardShadow,
   },
   phaseTitle: {
     fontSize: 16,
     fontWeight: '600',
     color: colors.text,
+    lineHeight: 22,
   },
   phaseSubtitle: {
     fontSize: 14,
     color: colors.textSecondary,
-    marginTop: 4,
+    marginTop: spacing.xs,
+    lineHeight: 20,
   },
   phaseItems: {
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
+    paddingLeft: spacing.xs,
   },
   phaseItemText: {
     fontSize: 14,
     color: colors.textSecondary,
-    marginBottom: 4,
-    lineHeight: 20,
+    marginBottom: spacing.sm,
+    lineHeight: 21,
+  },
+  benefitsCard: {
+    backgroundColor: colors.backgroundCard,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...cardShadow,
+  },
+  outcomesCard: {
+    backgroundColor: colors.backgroundCard,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...cardShadow,
+  },
+  certCard: {
+    backgroundColor: colors.backgroundCard,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...cardShadow,
   },
   bulletItem: {
-    marginBottom: spacing.sm,
+    marginBottom: spacing.md,
   },
   bulletTitle: {
     fontSize: 15,
     fontWeight: '600',
     color: colors.text,
+    lineHeight: 22,
   },
   bulletDesc: {
     fontSize: 14,
     color: colors.textSecondary,
-    marginTop: 2,
+    marginTop: spacing.xs,
+    lineHeight: 20,
   },
   bulletText: {
     fontSize: 14,
     color: colors.textSecondary,
-    marginBottom: 4,
-    lineHeight: 20,
+    marginBottom: spacing.sm,
+    lineHeight: 21,
   },
   registerSection: {
-    marginTop: spacing.xl,
+    marginTop: spacing.xxl,
     paddingTop: spacing.lg,
   },
   registerBtn: {
@@ -354,9 +431,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: spacing.sm,
     backgroundColor: colors.primary,
-    paddingVertical: spacing.lg,
+    paddingVertical: spacing.lg + 2,
     paddingHorizontal: spacing.xl,
-    borderRadius: borderRadius.xl,
+    borderRadius: borderRadius.xl + 2,
+    ...cardShadow,
   },
   registerBtnText: {
     fontSize: 16,
@@ -365,7 +443,7 @@ const styles = StyleSheet.create({
   },
   registeredBtn: {
     backgroundColor: colors.successBg,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.success,
   },
   registeredText: {

@@ -1,13 +1,14 @@
 // Leaderboard Screen
 import React from 'react';
-import { 
-  View, 
-  Text, 
-  FlatList, 
-  StyleSheet, 
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
   SafeAreaView,
   TouchableOpacity,
-  ActivityIndicator 
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useEventAnalytics } from '@/hooks/useEvents';
 import { colors, spacing } from '@/theme/colors';
@@ -18,7 +19,7 @@ interface LeaderboardScreenProps {
 }
 
 export function LeaderboardScreen({ eventId, onBack }: LeaderboardScreenProps) {
-  const { data: analytics, isLoading, error } = useEventAnalytics(eventId);
+  const { data: analytics, isLoading, error, refetch, isRefetching } = useEventAnalytics(eventId);
 
   const topStudents = analytics?.top_students || [];
 
@@ -42,9 +43,11 @@ export function LeaderboardScreen({ eventId, onBack }: LeaderboardScreenProps) {
         
         <View style={styles.studentInfo}>
           <Text style={styles.studentId}>
-            {item?.user_id
-              ? `${item.user_id.slice(0, 8)}...${item.user_id.slice(-4)}`
-              : '—'}
+            {(item?.display_name ?? item?.name ?? '').trim()
+              ? (item.display_name ?? item.name).trim()
+              : item?.user_id
+                ? `${item.user_id.slice(0, 8)}...${item.user_id.slice(-4)}`
+                : '—'}
           </Text>
           <Text style={styles.studentActions}>
             {item?.total_actions ?? 0} actions
@@ -106,6 +109,14 @@ export function LeaderboardScreen({ eventId, onBack }: LeaderboardScreenProps) {
           keyExtractor={(item, index) => item?.user_id ?? `student-${index}`}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={() => refetch()}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No rankings yet</Text>

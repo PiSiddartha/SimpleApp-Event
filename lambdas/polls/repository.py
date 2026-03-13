@@ -39,9 +39,9 @@ class PollRepository(IPollRepository):
         execute_query(
             """
             INSERT INTO polls (
-                id, event_id, question, created_by, status, created_at
+                id, event_id, question, created_by, status, material_id, created_at
             ) VALUES (
-                %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, %s, %s
             )
             """,
             (
@@ -50,6 +50,7 @@ class PollRepository(IPollRepository):
                 poll.question,
                 poll.created_by,
                 poll.status.value,
+                poll.material_id,
                 poll.created_at,
             ),
             fetch="none"
@@ -118,6 +119,7 @@ class PollRepository(IPollRepository):
             question=row["question"],
             created_by=row.get("created_by"),
             status=PollStatus(row.get("status", "draft")),
+            material_id=row.get("material_id"),
             created_at=row.get("created_at"),
         )
 
@@ -139,10 +141,10 @@ class PollOptionRepository(IPollOptionRepository):
         """Create a poll option."""
         execute_query(
             """
-            INSERT INTO poll_options (id, poll_id, option_text)
-            VALUES (%s, %s, %s)
+            INSERT INTO poll_options (id, poll_id, option_text, is_correct)
+            VALUES (%s, %s, %s, %s)
             """,
-            (option.id, option.poll_id, option.option_text),
+            (option.id, option.poll_id, option.option_text, option.is_correct),
             fetch="none"
         )
         
@@ -173,6 +175,7 @@ class PollOptionRepository(IPollOptionRepository):
             id=row["id"],
             poll_id=row["poll_id"],
             option_text=row["option_text"],
+            is_correct=row.get("is_correct", False),
         )
 
 

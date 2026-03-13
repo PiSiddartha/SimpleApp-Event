@@ -7,6 +7,7 @@ import {
   SafeAreaView,
   TouchableOpacity,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -51,6 +52,11 @@ export function LeaderboardHomeScreen({ onOpenLeaderboard, onOpenEvents }: Leade
 
   const isLoading = attendanceQuery.isLoading || eventsQuery.isLoading;
   const hasError = attendanceQuery.isError || eventsQuery.isError;
+  const isRefreshing = attendanceQuery.isRefetching || eventsQuery.isRefetching;
+  const onRefresh = () => {
+    attendanceQuery.refetch();
+    eventsQuery.refetch();
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -83,6 +89,14 @@ export function LeaderboardHomeScreen({ onOpenLeaderboard, onOpenEvents }: Leade
           data={joinedEvents}
           keyExtractor={(item) => item.record.id}
           contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
           renderItem={({ item }) => (
             <TouchableOpacity
               style={styles.card}

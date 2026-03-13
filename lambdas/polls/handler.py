@@ -91,11 +91,19 @@ def create_poll(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         return create_error_response(400, "Authenticated user profile could not be resolved")
     
     service = PollService()
+    correct_index = body.get("correct_option_index")
+    if correct_index is not None:
+        try:
+            correct_index = int(correct_index)
+        except (TypeError, ValueError):
+            correct_index = None
     result = service.create_poll(
         event_id=body.get("event_id"),
         question=body.get("question"),
         options=body.get("options", []),
         created_by=app_user.id,
+        material_id=body.get("material_id") or None,
+        correct_option_index=correct_index,
     )
     
     if not result:

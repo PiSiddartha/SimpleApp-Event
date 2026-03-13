@@ -25,6 +25,9 @@ export function PollCard({
   const isActive = (poll?.status ?? '') === 'active';
   const effectiveSelectedOptionId = submittedOptionId ?? selectedOptionId ?? null;
   const hasSubmitted = !!submittedOptionId;
+  const showCorrectAnswer = hasSubmitted || !isActive;
+  const correctOptionId = (poll?.options ?? []).find((o) => o.is_correct)?.id ?? null;
+  const userWasCorrect = hasSubmitted && correctOptionId && submittedOptionId === correctOptionId;
 
   return (
     <View style={styles.card}>
@@ -38,44 +41,51 @@ export function PollCard({
       </View>
 
       <View style={styles.options}>
-        {(poll?.options ?? []).map((option: PollOption) => (
-          (() => {
-            const isSelected = effectiveSelectedOptionId === option.id;
-            return (
-          <TouchableOpacity
-            key={option.id}
-            style={[
-              styles.optionButton,
-              !isActive && styles.optionButtonDisabled,
-              isSelected && styles.optionButtonSelected,
-              hasSubmitted && styles.optionButtonSubmitted,
-            ]}
-            onPress={() => onSelectOption(poll, option.id)}
-            disabled={!isActive || hasSubmitted || isSubmitting}
-            activeOpacity={0.7}
-          >
-            <View style={styles.optionContent}>
-              <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
-                {option.option_text}
-              </Text>
-              {isSelected ? (
-                <Ionicons
-                  name={hasSubmitted ? 'checkmark-circle' : 'radio-button-on'}
-                  size={20}
-                  color={hasSubmitted ? colors.success : colors.primary}
-                />
-              ) : null}
-            </View>
-          </TouchableOpacity>
-            );
-          })()
-        ))}
+        {(poll?.options ?? []).map((option: PollOption) => {
+          const isSelected = effectiveSelectedOptionId === option.id;
+          const isCorrectOption = option.is_correct === true;
+          return (
+            <TouchableOpacity
+              key={option.id}
+              style={[
+                styles.optionButton,
+                !isActive && styles.optionButtonDisabled,
+                isSelected && styles.optionButtonSelected,
+                hasSubmitted && styles.optionButtonSubmitted,
+                showCorrectAnswer && isCorrectOption && styles.optionButtonCorrect,
+              ]}
+              onPress={() => onSelectOption(poll, option.id)}
+              disabled={!isActive || hasSubmitted || isSubmitting}
+              activeOpacity={0.7}
+            >
+              <View style={styles.optionContent}>
+                <Text style={[styles.optionText, isSelected && styles.optionTextSelected]}>
+                  {option.option_text}
+                </Text>
+                <View style={styles.optionRight}>
+                  {showCorrectAnswer && isCorrectOption ? (
+                    <Text style={styles.correctBadge}>Correct</Text>
+                  ) : null}
+                  {isSelected ? (
+                    <Ionicons
+                      name={hasSubmitted ? 'checkmark-circle' : 'radio-button-on'}
+                      size={20}
+                      color={hasSubmitted ? colors.success : colors.primary}
+                    />
+                  ) : null}
+                </View>
+              </View>
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {hasSubmitted ? (
         <View style={styles.submittedBanner}>
           <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-          <Text style={styles.submittedText}>You selected this option.</Text>
+          <Text style={styles.submittedText}>
+            {userWasCorrect ? 'Your answer was correct.' : 'You selected this option.'}
+          </Text>
         </View>
       ) : isActive ? (
         <TouchableOpacity
@@ -163,6 +173,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
+  },
+  optionRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  optionButtonCorrect: {
+    borderColor: colors.success,
+    backgroundColor: colors.successBg,
+  },
+  correctBadge: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.success,
   },
   optionText: {
     fontSize: 15,

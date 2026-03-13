@@ -1,15 +1,16 @@
 // Event Screen
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  ScrollView, 
-  StyleSheet, 
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
   SafeAreaView,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
   Linking,
+  RefreshControl,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useEvent, useJoinEvent, useEventAnalytics } from '@/hooks/useEvents';
@@ -30,11 +31,18 @@ interface EventScreenProps {
 }
 
 export function EventScreen({ eventId, onBack, onPollPress }: EventScreenProps) {
-  const { data: event, isLoading: eventLoading, error: eventError } = useEvent(eventId);
-  const { data: pollsData, isLoading: pollsLoading } = usePolls(eventId);
-  const { data: materialsData, isLoading: materialsLoading } = useMaterials(eventId);
+  const { data: event, isLoading: eventLoading, error: eventError, refetch: refetchEvent, isRefetching: eventRefetching } = useEvent(eventId);
+  const { data: pollsData, isLoading: pollsLoading, refetch: refetchPolls, isRefetching: pollsRefetching } = usePolls(eventId);
+  const { data: materialsData, isLoading: materialsLoading, refetch: refetchMaterials, isRefetching: materialsRefetching } = useMaterials(eventId);
   const joinEvent = useJoinEvent();
-  const { data: analytics } = useEventAnalytics(eventId);
+  const { data: analytics, refetch: refetchAnalytics, isRefetching: analyticsRefetching } = useEventAnalytics(eventId);
+  const isRefreshing = eventRefetching || pollsRefetching || materialsRefetching || analyticsRefetching;
+  const onRefresh = () => {
+    refetchEvent();
+    refetchPolls();
+    refetchMaterials();
+    refetchAnalytics();
+  };
   const [joined, setJoined] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
   const [selectedPollOptions, setSelectedPollOptions] = useState<Record<string, string | null>>({});
@@ -138,7 +146,17 @@ export function EventScreen({ eventId, onBack, onPollPress }: EventScreenProps) 
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+      >
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={onBack} style={styles.backButton} activeOpacity={0.7}>
@@ -206,17 +224,28 @@ export function EventScreen({ eventId, onBack, onPollPress }: EventScreenProps) 
           {pollsLoading ? (
             <ActivityIndicator color={colors.primary} />
           ) : polls.length > 0 ? (
-            polls.map((poll: Poll) => (
-              <PollCard 
-                key={poll.id} 
-                poll={poll} 
-                onSelectOption={handlePollOptionSelect}
-                onSubmitAnswer={handleVote}
-                selectedOptionId={selectedPollOptions[poll.id]}
-                submittedOptionId={submittedPollOptions[poll.id]}
-                isSubmitting={submittingPollId === poll.id}
-              />
-            ))
+            polls.map((poll: Poll) => {
+              const relatedMaterial = poll.material_id
+                ? (materials as Material[]).find((m) => m.id === poll.material_id)
+                : null;
+              return (
+                <View key={poll.id}>
+                  {relatedMaterial ? (
+                    <Text style={styles.relatedMaterialText}>
+                      Related material: {relatedMaterial.title}
+                    </Text>
+                  ) : null}
+                  <PollCard 
+                    poll={poll} 
+                    onSelectOption={handlePollOptionSelect}
+                    onSubmitAnswer={handleVote}
+                    selectedOptionId={selectedPollOptions[poll.id]}
+                    submittedOptionId={submittedPollOptions[poll.id]}
+                    isSubmitting={submittingPollId === poll.id}
+                  />
+                </View>
+              );
+            })
           ) : (
             <Text style={styles.emptyText}>No polls available</Text>
           )}
@@ -415,6 +444,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: colors.text,
+  },
+  relatedMaterialText: {
+    fontSize: 13,
+    color: colors.primary,
+    marginBottom: spacing.xs,
   },
   emptyText: {
     fontSize: 14,

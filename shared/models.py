@@ -156,6 +156,7 @@ class Poll:
     question: str
     created_by: Optional[str] = None
     status: PollStatus = PollStatus.DRAFT
+    material_id: Optional[str] = None
     created_at: datetime = field(default_factory=datetime.utcnow)
     
     def to_dict(self) -> dict:
@@ -165,6 +166,7 @@ class Poll:
             "question": self.question,
             "created_by": self.created_by,
             "status": self.status.value,
+            "material_id": self.material_id,
             "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
@@ -175,12 +177,14 @@ class PollOption:
     id: str
     poll_id: str
     option_text: str
+    is_correct: bool = False
     
     def to_dict(self) -> dict:
         return {
             "id": self.id,
             "poll_id": self.poll_id,
             "option_text": self.option_text,
+            "is_correct": self.is_correct,
         }
 
 

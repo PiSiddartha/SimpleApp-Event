@@ -1,15 +1,16 @@
 // Materials Screen
 import React from 'react';
-import { 
-  View, 
-  Text, 
-  FlatList, 
-  StyleSheet, 
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
   SafeAreaView,
   TouchableOpacity,
   ActivityIndicator,
   Alert,
-  Linking 
+  Linking,
+  RefreshControl,
 } from 'react-native';
 import { useMaterials } from '@/hooks/useMaterials';
 import { MaterialItem } from '@/components/MaterialItem';
@@ -23,7 +24,7 @@ interface MaterialsScreenProps {
 }
 
 export function MaterialsScreen({ eventId, onBack }: MaterialsScreenProps) {
-  const { data: materialsData, isLoading, refetch } = useMaterials(eventId);
+  const { data: materialsData, isLoading, refetch, isRefetching } = useMaterials(eventId);
   const [downloading, setDownloading] = React.useState<string | null>(null);
 
   const materials = Array.isArray(materialsData)
@@ -82,6 +83,14 @@ export function MaterialsScreen({ eventId, onBack }: MaterialsScreenProps) {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={() => refetch()}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyIcon}>📄</Text>

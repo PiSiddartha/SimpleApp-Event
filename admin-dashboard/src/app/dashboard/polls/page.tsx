@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useEvents } from '@/hooks/useEvents';
-import { usePolls, usePollResults, useCreatePoll } from '@/hooks/usePolls';
+import { usePolls, usePollResults } from '@/hooks/usePolls';
+import { useMaterials } from '@/hooks/useMaterials';
 import { PollForm } from '@/components/PollForm';
 import { Plus, Vote, Loader2 } from 'lucide-react';
 import { Modal } from '@/components/Modal';
@@ -11,6 +12,9 @@ export default function PollsPage() {
   const { data: events } = useEvents();
   const [selectedEvent, setSelectedEvent] = useState<string>('');
   const { data: polls = [], isLoading } = usePolls(selectedEvent || undefined);
+  const { data: materialsData } = useMaterials(selectedEvent || '');
+  const materials = materialsData?.materials ?? [];
+  const materialTitleById = useMemo(() => new Map(materials.map((m: { id: string; title: string }) => [m.id, m.title])), [materials]);
   const [showModal, setShowModal] = useState(false);
   const [selectedPoll, setSelectedPoll] = useState<string | null>(null);
 
@@ -79,6 +83,11 @@ export default function PollsPage() {
                 <div className="min-w-0 flex-1">
                   <h3 className="font-semibold text-gray-900">{poll.question}</h3>
                   <p className="text-sm text-gray-500 mt-1">Event ID: {poll.event_id}</p>
+                  {poll.material_id && (
+                    <p className="text-sm text-primary-600 mt-0.5">
+                      Related: {materialTitleById.get(poll.material_id) ?? 'Material'}
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-3 shrink-0">
                   <span
@@ -140,10 +149,17 @@ export default function PollsPage() {
                 const total = results.reduce((sum: number, r: any) => sum + r.votes, 0);
                 const percentage = total > 0 ? Math.round((result.votes / total) * 100) : 0;
                 return (
-                  <div key={index}>
-                    <div className="flex items-center justify-between text-sm mb-1.5">
-                      <span className="font-medium text-gray-800">{result.option}</span>
-                      <span className="text-gray-500 tabular-nums">{result.votes} votes ({percentage}%)</span>
+                  <div key={result.option_id ?? index}>
+                    <div className="flex items-center justify-between text-sm mb-1.5 gap-2">
+                      <span className="font-medium text-gray-800 flex items-center gap-2">
+                        {result.option}
+                        {result.is_correct && (
+                          <span className="px-1.5 py-0.5 text-xs font-medium rounded bg-green-100 text-green-700">
+                            Correct
+                          </span>
+                        )}
+                      </span>
+                      <span className="text-gray-500 tabular-nums shrink-0">{result.votes} votes ({percentage}%)</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
                       <div

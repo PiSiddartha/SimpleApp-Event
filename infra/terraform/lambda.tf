@@ -5,9 +5,9 @@
 # that each zip contains: that Lambda's code + shared/ + requirements.txt deps.
 
 resource "null_resource" "build_lambdas" {
-  # Run build before any Lambda is created/updated. Change this value to force a rebuild.
+  # Run build before any Lambda is created/updated. Trigger changes when shared/engagement or trigger var changes.
   triggers = {
-    run_build = var.lambda_build_trigger
+    run_build = "${var.lambda_build_trigger}-${filemd5("${path.module}/../../shared/engagement/engagement_repository.py")}"
   }
 
   provisioner "local-exec" {

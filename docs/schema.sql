@@ -74,11 +74,13 @@ CREATE TABLE IF NOT EXISTS polls (
     question TEXT NOT NULL,
     created_by UUID REFERENCES users(id) ON DELETE SET NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'active', 'closed')),
+    material_id UUID REFERENCES materials(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX IF NOT EXISTS idx_polls_event_id ON polls(event_id);
 CREATE INDEX IF NOT EXISTS idx_polls_status ON polls(status);
+CREATE INDEX IF NOT EXISTS idx_polls_material_id ON polls(material_id);
 
 -- ============================================
 -- POLL_OPTIONS TABLE
@@ -87,6 +89,7 @@ CREATE TABLE IF NOT EXISTS poll_options (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     poll_id UUID REFERENCES polls(id) ON DELETE CASCADE,
     option_text TEXT NOT NULL,
+    is_correct BOOLEAN NOT NULL DEFAULT false,
     
     CONSTRAINT poll_options_poll_fk FOREIGN KEY (poll_id) REFERENCES polls(id) ON DELETE CASCADE
 );

@@ -56,16 +56,18 @@ class EngagementService:
         user_id: str,
         event_id: str,
         poll_id: str,
-        option_id: str
+        option_id: str,
+        is_correct: bool = False,
     ) -> None:
-        """Track poll vote."""
+        """Track poll vote (is_correct used for leaderboard scoring)."""
         self.track_event(
             user_id=user_id,
             event_id=event_id,
             action_type="VOTE_POLL",
             metadata={
                 "poll_id": poll_id,
-                "option_id": option_id
+                "option_id": option_id,
+                "is_correct": is_correct,
             }
         )
     
