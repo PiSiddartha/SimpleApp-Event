@@ -154,6 +154,23 @@ class ApiService {
     const response = await this.client.get('/users/me');
     return response.data;
   }
+
+  // Courses
+  async getCourses(params?: { status?: string }) {
+    const response = await this.client.get('/courses', { params });
+    const raw = response.data;
+    return Array.isArray(raw) ? raw : raw?.data ?? raw?.courses ?? [];
+  }
+
+  async getCourse(id: string) {
+    const response = await this.client.get(`/courses/${id}`);
+    return response.data;
+  }
+
+  async registerCourse(courseId: string) {
+    const response = await this.client.post(`/courses/${courseId}/register`, {});
+    return response.data;
+  }
 }
 
 export const api = new ApiService();

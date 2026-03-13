@@ -9,12 +9,14 @@ import {
   FileText, 
   BarChart3,
   UserCog,
-  Users
+  Users,
+  BookOpen
 } from 'lucide-react';
 
 const menuItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/dashboard/events', label: 'Events', icon: Calendar },
+  { href: '/dashboard/courses', label: 'Courses', icon: BookOpen },
   { href: '/dashboard/polls', label: 'Polls', icon: Vote },
   { href: '/dashboard/materials', label: 'Materials', icon: FileText },
   { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },

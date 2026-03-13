@@ -132,6 +132,129 @@ CREATE INDEX IF NOT EXISTS idx_materials_event_id ON materials(event_id);
 CREATE INDEX IF NOT EXISTS idx_materials_uploaded_by ON materials(uploaded_by);
 
 -- ============================================
+-- COURSES TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS courses (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    title VARCHAR(255) NOT NULL,
+    slug VARCHAR(255) UNIQUE,
+    short_description TEXT,
+    full_description TEXT,
+    status VARCHAR(20) NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'published')),
+    display_order INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_courses_status_display_order ON courses(status, display_order);
+
+-- ============================================
+-- COURSE_HIGHLIGHTS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS course_highlights (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    course_id UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    label VARCHAR(100) NOT NULL,
+    value VARCHAR(255) NOT NULL,
+    sort_order INT NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_course_highlights_course_id ON course_highlights(course_id);
+
+-- ============================================
+-- COURSE_PHASES TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS course_phases (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    course_id UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    subtitle VARCHAR(500),
+    sort_order INT NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_course_phases_course_id ON course_phases(course_id);
+
+-- ============================================
+-- COURSE_PHASE_ITEMS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS course_phase_items (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    phase_id UUID NOT NULL REFERENCES course_phases(id) ON DELETE CASCADE,
+    item_type VARCHAR(50) NOT NULL,
+    text TEXT NOT NULL,
+    sort_order INT NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_course_phase_items_phase_id ON course_phase_items(phase_id);
+
+-- ============================================
+-- COURSE_BENEFITS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS course_benefits (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    course_id UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    icon VARCHAR(100),
+    sort_order INT NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_course_benefits_course_id ON course_benefits(course_id);
+
+-- ============================================
+-- COURSE_AUDIENCE TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS course_audience (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    course_id UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    sort_order INT NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_course_audience_course_id ON course_audience(course_id);
+
+-- ============================================
+-- COURSE_CAREER_OUTCOMES TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS course_career_outcomes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    course_id UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    text TEXT NOT NULL,
+    sort_order INT NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_course_career_outcomes_course_id ON course_career_outcomes(course_id);
+
+-- ============================================
+-- COURSE_CERTIFICATE TABLE (one per course)
+-- ============================================
+CREATE TABLE IF NOT EXISTS course_certificate (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    course_id UUID NOT NULL UNIQUE REFERENCES courses(id) ON DELETE CASCADE,
+    title VARCHAR(255),
+    provider VARCHAR(255),
+    description TEXT,
+    image_url TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_course_certificate_course_id ON course_certificate(course_id);
+
+-- ============================================
+-- COURSE_REGISTRATIONS TABLE
+-- ============================================
+CREATE TABLE IF NOT EXISTS course_registrations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    course_id UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT course_registrations_course_user_unique UNIQUE (course_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_course_registrations_course_id ON course_registrations(course_id);
+CREATE INDEX IF NOT EXISTS idx_course_registrations_user_id ON course_registrations(user_id);
+
+-- ============================================
 -- SEED DATA (Optional)
 -- ============================================
 

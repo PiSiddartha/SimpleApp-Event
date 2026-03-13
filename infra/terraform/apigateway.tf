@@ -74,6 +74,13 @@ resource "aws_apigatewayv2_integration" "users" {
   payload_format_version = "1.0"
 }
 
+resource "aws_apigatewayv2_integration" "courses" {
+  api_id                 = aws_apigatewayv2_api.main.id
+  integration_type       = "AWS_PROXY"
+  integration_uri        = aws_lambda_function.courses.invoke_arn
+  payload_format_version = "1.0"
+}
+
 # ==================== ROUTES ====================
 # Events
 resource "aws_apigatewayv2_route" "events_post" {
@@ -263,6 +270,55 @@ resource "aws_apigatewayv2_route" "materials_id_delete" {
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
   target             = "integrations/${aws_apigatewayv2_integration.materials.id}"
+}
+
+# Courses
+resource "aws_apigatewayv2_route" "courses_get" {
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "GET /courses"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  target             = "integrations/${aws_apigatewayv2_integration.courses.id}"
+}
+
+resource "aws_apigatewayv2_route" "courses_post" {
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "POST /courses"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  target             = "integrations/${aws_apigatewayv2_integration.courses.id}"
+}
+
+resource "aws_apigatewayv2_route" "courses_id_get" {
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "GET /courses/{course_id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  target             = "integrations/${aws_apigatewayv2_integration.courses.id}"
+}
+
+resource "aws_apigatewayv2_route" "courses_id_put" {
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "PUT /courses/{course_id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  target             = "integrations/${aws_apigatewayv2_integration.courses.id}"
+}
+
+resource "aws_apigatewayv2_route" "courses_id_delete" {
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "DELETE /courses/{course_id}"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  target             = "integrations/${aws_apigatewayv2_integration.courses.id}"
+}
+
+resource "aws_apigatewayv2_route" "courses_id_register_post" {
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "POST /courses/{course_id}/register"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  target             = "integrations/${aws_apigatewayv2_integration.courses.id}"
 }
 
 # User management

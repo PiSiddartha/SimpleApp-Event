@@ -179,6 +179,35 @@ resource "aws_lambda_function" "analytics" {
   }
 }
 
+# Courses Lambda
+resource "aws_lambda_function" "courses" {
+  filename      = "../../lambdas/courses.zip"
+  function_name = "${var.project_name}-courses"
+  role          = aws_iam_role.lambda_exec.arn
+  runtime       = var.python_runtime
+  handler       = "courses.handler.handler"
+
+  timeout     = var.lambda_timeout
+  memory_size = var.lambda_memory_size
+
+  environment {
+    variables = local.lambda_env
+  }
+
+  depends_on = [
+    null_resource.build_lambdas,
+    aws_iam_role_policy_attachment.lambda_basic,
+    aws_iam_role_policy_attachment.lambda_rds,
+    aws_iam_role_policy_attachment.lambda_secrets,
+    aws_iam_role_policy_attachment.lambda_vpc
+  ]
+
+  vpc_config {
+    subnet_ids         = ["${var.private_subnet_1_id}", "${var.private_subnet_2_id}"]
+    security_group_ids = [aws_security_group.lambda.id]
+  }
+}
+
 # Users Lambda (admin list + PUT /users/me profile upsert to RDS)
 resource "aws_lambda_function" "users" {
   filename      = "../../lambdas/users.zip"
@@ -294,6 +323,14 @@ resource "aws_lambda_permission" "api_users" {
   statement_id  = "AllowExecutionFromAPIGatewayUsers"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.users.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
+}
+
+resource "aws_lambda_permission" "api_courses" {
+  statement_id  = "AllowExecutionFromAPIGateway"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.courses.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.main.execution_arn}/*/*"
 }

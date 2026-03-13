@@ -21,6 +21,7 @@ import { QRScannerScreen } from '@/screens/QRScannerScreen';
 import { ProfileScreen } from '@/screens/ProfileScreen';
 import { EditProfileScreen } from '@/screens/EditProfileScreen';
 import { CoursesScreen } from '@/screens/CoursesScreen';
+import { CourseDetailScreen } from '@/screens/CourseDetailScreen';
 import { colors, spacing } from '@/theme/colors';
 
 const Stack = createNativeStackNavigator();
@@ -131,7 +132,23 @@ function MainTabs({ onLogout }: { onLogout: (() => void) | null }) {
       >
         {() => (
           <Stack.Navigator screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="CoursesMain" component={CoursesScreen} />
+            <Stack.Screen name="CoursesMain">
+              {({ navigation }) => (
+                <CoursesScreen
+                  onCoursePress={(course) =>
+                    navigation.navigate('CourseDetail', { courseId: course.id })
+                  }
+                />
+              )}
+            </Stack.Screen>
+            <Stack.Screen name="CourseDetail">
+              {({ route, navigation }) => (
+                <CourseDetailScreen
+                  courseId={route.params?.courseId ?? ''}
+                  onBack={() => navigation.goBack()}
+                />
+              )}
+            </Stack.Screen>
           </Stack.Navigator>
         )}
       </Tab.Screen>

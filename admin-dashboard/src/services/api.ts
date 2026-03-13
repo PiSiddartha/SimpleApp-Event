@@ -170,6 +170,33 @@ class ApiService {
       next_token: raw?.next_token,
     };
   }
+
+  // Courses
+  async getCourses(params?: { status?: string; full?: string; limit?: number }) {
+    const response = await this.client.get('/courses', { params });
+    const raw = response.data;
+    return Array.isArray(raw) ? raw : raw?.data ?? raw?.courses ?? [];
+  }
+
+  async getCourse(id: string) {
+    const response = await this.client.get(`/courses/${id}`);
+    return response.data;
+  }
+
+  async createCourse(data: any) {
+    const response = await this.client.post('/courses', data);
+    return response.data;
+  }
+
+  async updateCourse(id: string, data: any) {
+    const response = await this.client.put(`/courses/${id}`, data);
+    return response.data;
+  }
+
+  async deleteCourse(id: string) {
+    const response = await this.client.delete(`/courses/${id}`);
+    return response.data;
+  }
 }
 
 export const api = new ApiService();

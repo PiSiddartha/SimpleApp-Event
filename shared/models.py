@@ -51,6 +51,12 @@ class UserType(str, Enum):
     PROFESSIONAL = "professional"
 
 
+class CourseStatus(str, Enum):
+    """Course status values."""
+    DRAFT = "draft"
+    PUBLISHED = "published"
+
+
 @dataclass
 class User:
     """User model."""
@@ -220,6 +226,189 @@ class Material:
         }
 
 
+# Course models
+
+@dataclass
+class Course:
+    """Course / program model."""
+    id: str
+    title: str
+    short_description: Optional[str] = None
+    full_description: Optional[str] = None
+    status: CourseStatus = CourseStatus.DRAFT
+    display_order: int = 0
+    slug: Optional[str] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "title": self.title,
+            "slug": self.slug,
+            "short_description": self.short_description,
+            "full_description": self.full_description,
+            "status": self.status.value if self.status else "draft",
+            "display_order": self.display_order,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+@dataclass
+class CourseHighlight:
+    """Course highlight (e.g. Duration: 12 weeks)."""
+    id: str
+    course_id: str
+    label: str
+    value: str
+    sort_order: int = 0
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "course_id": self.course_id,
+            "label": self.label,
+            "value": self.value,
+            "sort_order": self.sort_order,
+        }
+
+
+@dataclass
+class CoursePhase:
+    """Course phase / module."""
+    id: str
+    course_id: str
+    title: str
+    subtitle: Optional[str] = None
+    sort_order: int = 0
+    phase_items: Optional[List["CoursePhaseItem"]] = None
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "course_id": self.course_id,
+            "title": self.title,
+            "subtitle": self.subtitle,
+            "sort_order": self.sort_order,
+            "phase_items": [p.to_dict() for p in (self.phase_items or [])],
+        }
+
+
+@dataclass
+class CoursePhaseItem:
+    """Bullet under a phase (what you'll learn / outcome)."""
+    id: str
+    phase_id: str
+    item_type: str
+    text: str
+    sort_order: int = 0
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "phase_id": self.phase_id,
+            "item_type": self.item_type,
+            "text": self.text,
+            "sort_order": self.sort_order,
+        }
+
+
+@dataclass
+class CourseBenefit:
+    """Course benefit (why choose)."""
+    id: str
+    course_id: str
+    title: str
+    description: Optional[str] = None
+    icon: Optional[str] = None
+    sort_order: int = 0
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "course_id": self.course_id,
+            "title": self.title,
+            "description": self.description,
+            "icon": self.icon,
+            "sort_order": self.sort_order,
+        }
+
+
+@dataclass
+class CourseAudience:
+    """Target audience (who should attend)."""
+    id: str
+    course_id: str
+    title: str
+    description: Optional[str] = None
+    sort_order: int = 0
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "course_id": self.course_id,
+            "title": self.title,
+            "description": self.description,
+            "sort_order": self.sort_order,
+        }
+
+
+@dataclass
+class CourseCareerOutcome:
+    """Career outcome bullet."""
+    id: str
+    course_id: str
+    text: str
+    sort_order: int = 0
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "course_id": self.course_id,
+            "text": self.text,
+            "sort_order": self.sort_order,
+        }
+
+
+@dataclass
+class CourseCertificate:
+    """Certificate info (one per course)."""
+    id: str
+    course_id: str
+    title: Optional[str] = None
+    provider: Optional[str] = None
+    description: Optional[str] = None
+    image_url: Optional[str] = None
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "course_id": self.course_id,
+            "title": self.title,
+            "provider": self.provider,
+            "description": self.description,
+            "image_url": self.image_url,
+        }
+
+
+@dataclass
+class CourseRegistration:
+    """User registration for a course."""
+    id: str
+    course_id: str
+    user_id: str
+    created_at: Optional[datetime] = None
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "course_id": self.course_id,
+            "user_id": self.user_id,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
 # Repository interfaces
 
 
@@ -353,4 +542,31 @@ class MaterialRepository:
         raise NotImplementedError
     
     def list_by_event(self, event_id: str) -> List[Material]:
+        raise NotImplementedError
+
+
+class CourseRepository:
+    """Interface for course data operations."""
+
+    def get_by_id(self, course_id: str) -> Optional[Course]:
+        raise NotImplementedError
+
+    def list(
+        self,
+        limit: int = 50,
+        status_filter: Optional[str] = None,
+        full: bool = False,
+    ) -> List:
+        raise NotImplementedError
+
+    def create(self, course: Course, children: dict) -> Course:
+        raise NotImplementedError
+
+    def update(self, course_id: str, course: Course, children: dict) -> Optional[Course]:
+        raise NotImplementedError
+
+    def delete(self, course_id: str) -> bool:
+        raise NotImplementedError
+
+    def register(self, course_id: str, user_id: str) -> bool:
         raise NotImplementedError
