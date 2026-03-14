@@ -1,5 +1,5 @@
 // Poll Screen
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,8 +11,8 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import { usePoll, usePollResults, useCastVote } from '@/hooks/usePolls';
-import { api } from '@/services/api';
 import { PollOption } from '@/types/poll';
 import { colors, spacing, borderRadius } from '@/theme/colors';
 
@@ -21,10 +21,18 @@ interface PollScreenProps {
   onBack: () => void;
 }
 
+function getErrorMessage(error: any): string {
+  const msg = error?.response?.data?.message ?? error?.response?.data?.error;
+  if (typeof msg === 'string' && msg.trim()) return msg.trim();
+  return 'Failed to submit your answer.';
+}
+
 export function PollScreen({ pollId, onBack }: PollScreenProps) {
+  const queryClient = useQueryClient();
   const { data: poll, isLoading: pollLoading, refetch: refetchPoll, isRefetching: pollRefetching } = usePoll(pollId);
   const { data: results, isLoading: resultsLoading, refetch: refetchResults, isRefetching: resultsRefetching } = usePollResults(pollId);
   const castVote = useCastVote();
+  const [hasVotedThisSession, setHasVotedThisSession] = useState(false);
   const isRefreshing = pollRefetching || resultsRefetching;
   const onRefresh = () => {
     refetchPoll();
@@ -34,13 +42,20 @@ export function PollScreen({ pollId, onBack }: PollScreenProps) {
   const handleVote = async (optionId: string) => {
     try {
       await castVote.mutateAsync({ pollId, optionId });
+      setHasVotedThisSession(true);
+      await Promise.all([refetchPoll(), refetchResults()]);
+      queryClient.invalidateQueries({ queryKey: ['polls', pollId] });
+      queryClient.invalidateQueries({ queryKey: ['polls', pollId, 'results'] });
       Alert.alert('Success', 'Your answer has been recorded.');
-      refetch();
     } catch (error: any) {
-      if (error.response?.data?.message?.includes('already voted')) {
+      const message = getErrorMessage(error);
+      if (message.toLowerCase().includes('already voted')) {
+        setHasVotedThisSession(true);
+        refetchResults();
+        queryClient.invalidateQueries({ queryKey: ['polls', pollId, 'results'] });
         Alert.alert('Info', 'You have already answered this question.');
       } else {
-        Alert.alert('Error', 'Failed to submit your answer.');
+        Alert.alert('Error', message);
       }
     }
   };
@@ -66,6 +81,7 @@ export function PollScreen({ pollId, onBack }: PollScreenProps) {
   }
 
   const totalVotes = results?.results?.reduce((sum: number, r: { option: string; votes: number }) => sum + r.votes, 0) || 0;
+  const canVote = poll.status === 'active' && !hasVotedThisSession;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -98,16 +114,18 @@ export function PollScreen({ pollId, onBack }: PollScreenProps) {
           </View>
         </View>
 
-        {/* Voting Options */}
+        {/* Voting Options - only when active and not yet voted */}
         {poll.status === 'active' && (
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Choose the correct answer</Text>
+            <Text style={styles.sectionTitle}>
+              {hasVotedThisSession ? "You've already answered" : 'Choose the correct answer'}
+            </Text>
             {poll.options?.map((option: PollOption) => (
               <TouchableOpacity
                 key={option.id}
-                style={styles.optionButton}
-                onPress={() => handleVote(option.id)}
-                disabled={castVote.isPending}
+                style={[styles.optionButton, !canVote && styles.optionButtonDisabled]}
+                onPress={() => canVote && handleVote(option.id)}
+                disabled={!canVote || castVote.isPending}
               >
                 <Text style={styles.optionText}>{option.option_text}</Text>
               </TouchableOpacity>
@@ -115,21 +133,28 @@ export function PollScreen({ pollId, onBack }: PollScreenProps) {
           </View>
         )}
 
-        {/* Results */}
+        {/* Results - show correct answer when poll has one */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
             📊 Results ({totalVotes} votes)
           </Text>
           
-          {results?.results?.map((result: { option: string; votes: number }, index: number) => {
+          {results?.results?.map((result: { option_id?: string; option: string; votes: number; is_correct?: boolean }, index: number) => {
             const percentage = totalVotes > 0 
               ? Math.round((result.votes / totalVotes) * 100) 
               : 0;
             
             return (
-              <View key={index} style={styles.resultItem}>
+              <View key={result.option_id ?? index} style={styles.resultItem}>
                 <View style={styles.resultHeader}>
-                  <Text style={styles.resultOption}>{result.option}</Text>
+                  <View style={styles.resultOptionRow}>
+                    <Text style={styles.resultOption}>{result.option}</Text>
+                    {result.is_correct && (
+                      <View style={styles.correctBadge}>
+                        <Text style={styles.correctBadgeText}>Correct</Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={styles.resultVotes}>
                     {result.votes} votes ({percentage}%)
                   </Text>
@@ -214,6 +239,10 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     alignItems: 'center',
   },
+  optionButtonDisabled: {
+    opacity: 0.7,
+    backgroundColor: '#f9fafb',
+  },
   optionText: {
     fontSize: 16,
     color: '#374151',
@@ -225,7 +254,14 @@ const styles = StyleSheet.create({
   resultHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 6,
+  },
+  resultOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
   },
   resultOption: {
     fontSize: 15,
@@ -235,6 +271,17 @@ const styles = StyleSheet.create({
   resultVotes: {
     fontSize: 14,
     color: '#6b7280',
+  },
+  correctBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: '#22c55e20',
+  },
+  correctBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#22c55e',
   },
   progressBar: {
     height: 8,

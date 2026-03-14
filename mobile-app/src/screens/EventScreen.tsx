@@ -82,11 +82,6 @@ export function EventScreen({ eventId, onBack, onPollPress }: EventScreenProps) 
       return;
     }
 
-    if (onPollPress) {
-      onPollPress(poll.id);
-      return;
-    }
-
     setSubmittingPollId(poll.id);
     try {
       await api.castVote(poll.id, optionId);
@@ -95,8 +90,17 @@ export function EventScreen({ eventId, onBack, onPollPress }: EventScreenProps) 
         [poll.id]: optionId,
       }));
       Alert.alert('Success', 'Your answer has been recorded.');
-    } catch {
-      Alert.alert('Error', 'Failed to submit your answer.');
+      if (onPollPress) {
+        onPollPress(poll.id);
+      }
+    } catch (error: any) {
+      const msg = (error?.response?.data?.message ?? error?.response?.data?.error ?? 'Failed to submit your answer.').trim();
+      if (msg.toLowerCase().includes('already voted')) {
+        setSubmittedPollOptions((current) => ({ ...current, [poll.id]: optionId }));
+        if (onPollPress) onPollPress(poll.id);
+        return;
+      }
+      Alert.alert('Error', msg);
     } finally {
       setSubmittingPollId(null);
     }
