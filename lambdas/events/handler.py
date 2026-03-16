@@ -54,6 +54,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         elif path.startswith("/events/"):
             parts = path.split("/")
             if len(parts) >= 3:
+                event_id = parts[2]
+                if len(parts) == 4 and parts[3] == "calendar.ics" and method == "GET":
+                    return get_event_calendar_ics(event, context)
                 if method == "GET":
                     return get_event(event, context)
                 elif method == "PUT":
@@ -183,3 +186,27 @@ def list_events(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     )
     
     return create_response(200, result)
+
+
+def get_event_calendar_ics(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    """Return .ics calendar for a single event."""
+    from events.service import EventService
+    from shared.calendar.ics import event_to_ics
+
+    event_id = _extract_event_id(event.get("path", ""))
+    if not event_id:
+        return create_error_response(400, "event_id is required")
+    service = EventService()
+    ev = service.get_event(event_id)
+    if not ev:
+        return create_error_response(404, "Event not found")
+    ics_content = event_to_ics(ev if isinstance(ev, dict) else (ev.to_dict() if hasattr(ev, "to_dict") else ev))
+    return {
+        "statusCode": 200,
+        "headers": {
+            "Content-Type": "text/calendar; charset=utf-8",
+            "Content-Disposition": 'attachment; filename="event.ics"',
+        },
+        "body": ics_content,
+        "isBase64Encoded": False,
+    }

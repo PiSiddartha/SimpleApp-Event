@@ -18,6 +18,14 @@ export function useCourse(id: string) {
   });
 }
 
+export function useCourseRegistrations(courseId: string, params?: { status?: string }) {
+  return useQuery({
+    queryKey: ['courses', courseId, 'registrations', params],
+    queryFn: () => api.getCourseRegistrations(courseId, params),
+    enabled: !!courseId,
+  });
+}
+
 export function useCreateCourse() {
   const queryClient = useQueryClient();
   return useMutation({

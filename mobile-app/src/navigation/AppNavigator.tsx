@@ -22,6 +22,7 @@ import { ProfileScreen } from '@/screens/ProfileScreen';
 import { EditProfileScreen } from '@/screens/EditProfileScreen';
 import { CoursesScreen } from '@/screens/CoursesScreen';
 import { CourseDetailScreen } from '@/screens/CourseDetailScreen';
+import { PrivacyPolicyScreen } from '@/screens/PrivacyPolicyScreen';
 import { colors, spacing } from '@/theme/colors';
 
 const Stack = createNativeStackNavigator();
@@ -79,7 +80,13 @@ function MainTabs({ onLogout }: { onLogout: (() => void) | null }) {
                   onBack={() => navigation.goBack()}
                   onLogout={onLogout ? () => onLogout() : () => {}}
                   onEditProfile={() => navigation.navigate('EditProfile')}
+                  onPrivacyPolicy={() => navigation.navigate('PrivacyPolicy')}
                 />
+              )}
+            </Stack.Screen>
+            <Stack.Screen name="PrivacyPolicy">
+              {({ navigation }: any) => (
+                <PrivacyPolicyScreen onBack={() => navigation.goBack()} />
               )}
             </Stack.Screen>
             <Stack.Screen name="EditProfile">

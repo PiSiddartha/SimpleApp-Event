@@ -57,6 +57,28 @@ class CourseStatus(str, Enum):
     PUBLISHED = "published"
 
 
+class RegistrationStatus(str, Enum):
+    """Course registration status."""
+    INTERESTED = "interested"
+    APPLIED = "applied"
+    REGISTERED = "registered"
+    COMPLETED = "completed"
+    DROPPED = "dropped"
+
+
+class ClassType(str, Enum):
+    """Course class/session type."""
+    RECORDED = "recorded"
+    ONLINE = "online"
+    IN_PERSON = "in_person"
+
+
+class CertificateType(str, Enum):
+    """Issued certificate type."""
+    ATTENDANCE = "attendance"
+    COMPLETION = "completion"
+
+
 @dataclass
 class User:
     """User model."""
@@ -112,7 +134,10 @@ class Event:
     max_attendees: Optional[int] = None
     visibility: EventVisibility = EventVisibility.GLOBAL
     created_at: datetime = field(default_factory=datetime.utcnow)
-    
+    is_exam: bool = False
+    course_id: Optional[str] = None
+    issue_attendance_certificate: bool = False
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,
@@ -128,6 +153,9 @@ class Event:
             "max_attendees": self.max_attendees,
             "visibility": self.visibility.value if self.visibility else "global",
             "created_at": self.created_at.isoformat() if self.created_at else None,
+            "is_exam": getattr(self, "is_exam", False),
+            "course_id": getattr(self, "course_id", None),
+            "issue_attendance_certificate": getattr(self, "issue_attendance_certificate", False),
         }
 
 
@@ -138,13 +166,19 @@ class Attendance:
     user_id: str
     event_id: str
     timestamp: datetime = field(default_factory=datetime.utcnow)
-    
+    mode: Optional[str] = None  # recorded, online, in_person
+    course_id: Optional[str] = None
+    class_id: Optional[str] = None
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,
             "user_id": self.user_id,
             "event_id": self.event_id,
             "timestamp": self.timestamp.isoformat() if self.timestamp else None,
+            "mode": getattr(self, "mode", None),
+            "course_id": getattr(self, "course_id", None),
+            "class_id": getattr(self, "class_id", None),
         }
 
 
@@ -211,13 +245,15 @@ class Vote:
 class Material:
     """Learning material model."""
     id: str
-    event_id: str
+    event_id: Optional[str] = None
     title: str
     file_url: str
     file_type: Optional[str] = None
     uploaded_by: Optional[str] = None
     created_at: datetime = field(default_factory=datetime.utcnow)
-    
+    course_id: Optional[str] = None
+    class_id: Optional[str] = None
+
     def to_dict(self) -> dict:
         return {
             "id": self.id,
@@ -227,6 +263,8 @@ class Material:
             "file_type": self.file_type,
             "uploaded_by": self.uploaded_by,
             "uploaded_at": self.created_at.isoformat() if self.created_at else None,
+            "course_id": getattr(self, "course_id", None),
+            "class_id": getattr(self, "class_id", None),
         }
 
 
@@ -244,6 +282,7 @@ class Course:
     slug: Optional[str] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+    delivery_modes: Optional[List[str]] = None  # recorded, online, in_person
 
     def to_dict(self) -> dict:
         return {
@@ -256,6 +295,7 @@ class Course:
             "display_order": self.display_order,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "delivery_modes": getattr(self, "delivery_modes", None) or [],
         }
 
 
@@ -384,6 +424,8 @@ class CourseCertificate:
     provider: Optional[str] = None
     description: Optional[str] = None
     image_url: Optional[str] = None
+    external_config: Optional[dict] = None
+    completion_rules: Optional[dict] = None
 
     def to_dict(self) -> dict:
         return {
@@ -393,6 +435,45 @@ class CourseCertificate:
             "provider": self.provider,
             "description": self.description,
             "image_url": self.image_url,
+            "external_config": getattr(self, "external_config", None),
+            "completion_rules": getattr(self, "completion_rules", None),
+        }
+
+
+@dataclass
+class CourseClass:
+    """Course class/session (recorded, online, in_person)."""
+    id: str
+    course_id: str
+    title: str
+    description: Optional[str] = None
+    class_type: str  # recorded, online, in_person
+    duration_minutes: Optional[int] = None
+    start_time: Optional[datetime] = None
+    end_time: Optional[datetime] = None
+    zoom_link: Optional[str] = None
+    location: Optional[str] = None
+    recording_material_id: Optional[str] = None
+    event_id: Optional[str] = None
+    sort_order: int = 0
+    created_at: Optional[datetime] = None
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "course_id": self.course_id,
+            "title": self.title,
+            "description": self.description,
+            "class_type": self.class_type,
+            "duration_minutes": self.duration_minutes,
+            "start_time": self.start_time.isoformat() if self.start_time else None,
+            "end_time": self.end_time.isoformat() if self.end_time else None,
+            "zoom_link": self.zoom_link,
+            "location": self.location,
+            "recording_material_id": self.recording_material_id,
+            "event_id": self.event_id,
+            "sort_order": self.sort_order,
+            "created_at": self.created_at.isoformat() if self.created_at else None,
         }
 
 
@@ -403,6 +484,10 @@ class CourseRegistration:
     course_id: str
     user_id: str
     created_at: Optional[datetime] = None
+    status: str = "registered"
+    updated_at: Optional[datetime] = None
+    notes: Optional[str] = None
+    source: Optional[str] = None
 
     def to_dict(self) -> dict:
         return {
@@ -410,7 +495,52 @@ class CourseRegistration:
             "course_id": self.course_id,
             "user_id": self.user_id,
             "created_at": self.created_at.isoformat() if self.created_at else None,
+            "status": getattr(self, "status", "registered"),
+            "updated_at": self.updated_at.isoformat() if getattr(self, "updated_at", None) else None,
+            "notes": getattr(self, "notes", None),
+            "source": getattr(self, "source", None),
         }
+
+
+@dataclass
+class Exam:
+    """Exam for a course."""
+    id: str
+    course_id: str
+    title: str
+    description: Optional[str] = None
+    type: Optional[str] = None
+    max_score: Optional[int] = None
+    pass_score: Optional[int] = None
+    is_proctored: bool = False
+    created_at: Optional[datetime] = None
+
+
+@dataclass
+class ExamAttempt:
+    """User exam attempt."""
+    id: str
+    exam_id: str
+    user_id: str
+    score: Optional[float] = None
+    status: Optional[str] = None  # pending, passed, failed
+    attempted_at: Optional[datetime] = None
+    metadata: Optional[dict] = None
+
+
+@dataclass
+class CertificateIssued:
+    """Issued certificate (attendance or completion)."""
+    id: str
+    user_id: str
+    course_id: Optional[str] = None
+    event_id: Optional[str] = None
+    certificate_type: str  # attendance, completion
+    provider: Optional[str] = None
+    certificate_url: Optional[str] = None
+    external_certificate_id: Optional[str] = None
+    issued_at: Optional[datetime] = None
+    metadata: Optional[dict] = None
 
 
 # Repository interfaces

@@ -196,7 +196,20 @@ class UserRepository(IUserRepository):
             company=company,
         )
         return self.create(user)
-    
+
+    def update_privacy_consent(self, user_id: str, version: str) -> bool:
+        """Update user's privacy policy acceptance (version and timestamp)."""
+        try:
+            execute_query(
+                "UPDATE users SET privacy_policy_version = %s, privacy_policy_accepted_at = NOW() WHERE id = %s",
+                (version, user_id),
+                fetch="none",
+            )
+            return True
+        except Exception as e:
+            logger.warning("update_privacy_consent: %s", e)
+            return False
+
     def _row_to_user(self, row: dict) -> User:
         """Convert database row to User model."""
         return User(

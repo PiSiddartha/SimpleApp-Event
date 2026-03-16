@@ -51,6 +51,25 @@ export interface CourseCareerOutcome {
   sort_order?: number;
 }
 
+export type ClassType = 'recorded' | 'online' | 'in_person';
+
+export interface CourseClass {
+  id?: string;
+  course_id?: string;
+  title: string;
+  description?: string;
+  class_type: ClassType;
+  duration_minutes?: number;
+  start_time?: string;
+  end_time?: string;
+  zoom_link?: string;
+  location?: string;
+  recording_material_id?: string;
+  event_id?: string;
+  sort_order?: number;
+  created_at?: string;
+}
+
 export interface CourseCertificate {
   id?: string;
   course_id?: string;
@@ -58,6 +77,24 @@ export interface CourseCertificate {
   provider?: string;
   description?: string;
   image_url?: string;
+  external_config?: Record<string, unknown>;
+  completion_rules?: Record<string, unknown>;
+}
+
+export type RegistrationStatus = 'interested' | 'applied' | 'registered' | 'completed' | 'dropped';
+
+export interface CourseRegistration {
+  id: string;
+  course_id: string;
+  user_id: string;
+  status: RegistrationStatus;
+  created_at?: string;
+  updated_at?: string;
+  notes?: string;
+  source?: string;
+  name?: string;
+  email?: string;
+  user_type?: string;
 }
 
 export interface Course {
@@ -70,12 +107,14 @@ export interface Course {
   display_order: number;
   created_at?: string;
   updated_at?: string;
+  delivery_modes?: ClassType[];
   highlights?: CourseHighlight[];
   phases?: CoursePhase[];
   benefits?: CourseBenefit[];
   audience?: CourseAudience[];
   career_outcomes?: CourseCareerOutcome[];
   certificate?: CourseCertificate | null;
+  classes?: CourseClass[];
 }
 
 export interface CreateCourseInput {
@@ -85,12 +124,14 @@ export interface CreateCourseInput {
   full_description?: string;
   status?: CourseStatus;
   display_order?: number;
+  delivery_modes?: ClassType[];
   highlights?: CourseHighlight[];
   phases?: CoursePhase[];
   benefits?: CourseBenefit[];
   audience?: CourseAudience[];
   career_outcomes?: CourseCareerOutcome[];
   certificate?: CourseCertificate | null;
+  classes?: CourseClass[];
 }
 
 export interface UpdateCourseInput extends CreateCourseInput {}

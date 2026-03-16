@@ -91,6 +91,9 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         if path == "/users/me" and method in ("PUT", "POST"):
             return put_users_me(event, context)
 
+        if path == "/users/me/privacy-consent" and method == "POST":
+            return post_privacy_consent(event, context)
+
         return create_error_response(404, "Endpoint not found")
     except Exception as exc:
         logger.error("Users handler error: %s", exc, exc_info=True)
@@ -161,6 +164,31 @@ def put_users_me(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         company=company,
     )
     return create_response(200, updated.to_dict())
+
+
+@require_auth
+def post_privacy_consent(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
+    """POST /users/me/privacy-consent – record privacy policy acceptance (version and timestamp)."""
+    from shared.user_repository import get_or_create_user_from_claims, UserRepository
+
+    user_claims = event.get("user") or {}
+    db_user = get_or_create_user_from_claims(user_claims)
+    if not db_user:
+        return create_error_response(400, "User profile could not be resolved")
+
+    try:
+        body = json.loads(event.get("body", "{}") or "{}")
+    except json.JSONDecodeError:
+        return create_error_response(400, "Invalid JSON body")
+    version = (body.get("version") or "").strip()
+    if not version:
+        return create_error_response(400, "version is required")
+
+    repo = UserRepository()
+    success = repo.update_privacy_consent(db_user.id, version)
+    if not success:
+        return create_error_response(500, "Failed to record consent")
+    return create_response(200, {"accepted": True, "version": version})
 
 
 @require_role("admin")

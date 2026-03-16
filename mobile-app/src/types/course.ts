@@ -58,6 +58,25 @@ export interface CourseCertificate {
   image_url?: string;
 }
 
+export type ClassType = 'recorded' | 'online' | 'in_person';
+
+export interface CourseClass {
+  id: string;
+  course_id?: string;
+  title: string;
+  description?: string;
+  class_type: ClassType;
+  duration_minutes?: number;
+  start_time?: string;
+  end_time?: string;
+  zoom_link?: string;
+  location?: string;
+  recording_material_id?: string;
+  event_id?: string;
+  sort_order?: number;
+  created_at?: string;
+}
+
 export interface Course {
   id: string;
   title: string;
@@ -68,10 +87,12 @@ export interface Course {
   display_order: number;
   created_at?: string;
   updated_at?: string;
+  delivery_modes?: ClassType[];
   highlights?: CourseHighlight[];
   phases?: CoursePhase[];
   benefits?: CourseBenefit[];
   audience?: CourseAudience[];
   career_outcomes?: CourseCareerOutcome[];
   certificate?: CourseCertificate | null;
+  classes?: CourseClass[];
 }

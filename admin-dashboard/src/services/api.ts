@@ -197,6 +197,28 @@ class ApiService {
     const response = await this.client.delete(`/courses/${id}`);
     return response.data;
   }
+
+  async getCourseRegistrations(courseId: string, params?: { status?: string }) {
+    const response = await this.client.get(`/courses/${courseId}/registrations`, { params });
+    const raw = response.data as { registrations?: unknown[] };
+    return raw?.registrations ?? [];
+  }
+
+  async updateCourseRegistration(courseId: string, userId: string, body: { status: string; notes?: string }) {
+    const response = await this.client.put(`/courses/${courseId}/registrations`, { user_id: userId, ...body });
+    return response.data;
+  }
+
+  async getCourseCalendarIcs(courseId: string): Promise<string> {
+    const response = await this.client.get(`/courses/${courseId}/calendar.ics`, { responseType: 'text' });
+    return response.data as string;
+  }
+
+  async getCourseEnquiries(params?: { status?: string }) {
+    const response = await this.client.get('/courses/enquiries', { params });
+    const raw = response.data as { enquiries?: unknown[] };
+    return raw?.enquiries ?? [];
+  }
 }
 
 export const api = new ApiService();

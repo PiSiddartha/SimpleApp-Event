@@ -40,6 +40,13 @@ class CourseService:
             status_enum = CourseStatus(status) if status else CourseStatus.DRAFT
         except ValueError:
             status_enum = CourseStatus.DRAFT
+        delivery_modes = payload.get("delivery_modes") or []
+        if isinstance(delivery_modes, str):
+            import json
+            try:
+                delivery_modes = json.loads(delivery_modes) if delivery_modes else []
+            except Exception:
+                delivery_modes = []
         course = Course(
             id=course_id,
             title=payload.get("title") or "",
@@ -48,6 +55,7 @@ class CourseService:
             full_description=payload.get("full_description"),
             status=status_enum,
             display_order=int(payload.get("display_order") or 0),
+            delivery_modes=delivery_modes,
         )
         children = {
             "highlights": payload.get("highlights") or [],
@@ -56,6 +64,7 @@ class CourseService:
             "audience": payload.get("audience") or [],
             "career_outcomes": payload.get("career_outcomes") or [],
             "certificate": payload.get("certificate"),
+            "classes": payload.get("classes") or [],
         }
         self.repository.create(course, children)
         result = self.repository.get_by_id(course_id)
@@ -71,6 +80,15 @@ class CourseService:
             status_enum = CourseStatus(status) if status else CourseStatus.DRAFT
         except ValueError:
             status_enum = CourseStatus.DRAFT
+        delivery_modes = payload.get("delivery_modes")
+        if delivery_modes is None:
+            delivery_modes = existing.get("delivery_modes") or []
+        if isinstance(delivery_modes, str):
+            import json
+            try:
+                delivery_modes = json.loads(delivery_modes) if delivery_modes else []
+            except Exception:
+                delivery_modes = []
         course = Course(
             id=course_id,
             title=payload.get("title") or existing.get("title", ""),
@@ -79,6 +97,7 @@ class CourseService:
             full_description=payload.get("full_description") if "full_description" in payload else existing.get("full_description"),
             status=status_enum,
             display_order=int(payload.get("display_order") if "display_order" in payload else existing.get("display_order", 0)),
+            delivery_modes=delivery_modes,
         )
         children = {
             "highlights": payload.get("highlights", existing.get("highlights", [])),
@@ -87,6 +106,7 @@ class CourseService:
             "audience": payload.get("audience", existing.get("audience", [])),
             "career_outcomes": payload.get("career_outcomes", existing.get("career_outcomes", [])),
             "certificate": payload.get("certificate") if "certificate" in payload else existing.get("certificate"),
+            "classes": payload.get("classes", existing.get("classes", [])),
         }
         self.repository.update(course_id, course, children)
         return self.repository.get_by_id(course_id)
@@ -98,9 +118,44 @@ class CourseService:
             return False
         return self.repository.delete(course_id)
 
-    def register_course(self, course_id: str, user_id: str) -> bool:
-        """Register user for course (idempotent)."""
+    def register_course(self, course_id: str, user_id: str, source: Optional[str] = None) -> bool:
+        """Register user for course (idempotent, status=registered)."""
         existing = self.repository.get_by_id(course_id)
         if not existing:
             return False
-        return self.repository.register(course_id, user_id)
+        return self.repository.register(course_id, user_id, status="registered", source=source)
+
+    def mark_interest(self, course_id: str, user_id: str, source: Optional[str] = "mobile") -> bool:
+        """Mark user as interested in course."""
+        existing = self.repository.get_by_id(course_id)
+        if not existing:
+            return False
+        return self.repository.mark_interest(course_id, user_id, source=source)
+
+    def list_registrations(self, course_id: str, status_filter: Optional[str] = None) -> List[Dict[str, Any]]:
+        """List registrations for a course."""
+        return self.repository.list_registrations(course_id, status_filter=status_filter)
+
+    def list_user_registrations(self, user_id: str) -> List[Dict[str, Any]]:
+        """List courses the user is registered/interested in."""
+        return self.repository.list_user_registrations(user_id)
+
+    def update_registration_status(self, course_id: str, user_id: str, status: str, notes: Optional[str] = None) -> bool:
+        """Update registration status (admin)."""
+        return self.repository.update_registration_status(course_id, user_id, status, notes=notes)
+
+    def list_enquiries(self, status: str = "interested") -> List[Dict[str, Any]]:
+        """List all registrations with given status across courses (for enquiries page)."""
+        return self.repository.list_all_registrations_by_status(status)
+
+    def get_course_ics(self, course_id: str) -> Optional[str]:
+        """Get .ics calendar content for course (all classes)."""
+        course = self.repository.get_by_id(course_id)
+        if not course or not course.get("classes"):
+            return None
+        from shared.calendar.ics import course_classes_to_ics
+        return course_classes_to_ics(
+            course["classes"],
+            course_id,
+            course.get("title") or "Course",
+        )

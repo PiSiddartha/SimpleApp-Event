@@ -31,6 +31,17 @@ def _row_to_course(row: dict) -> Course:
         status_enum = CourseStatus(status) if status else CourseStatus.DRAFT
     except ValueError:
         status_enum = CourseStatus.DRAFT
+    delivery_modes = row.get("delivery_modes")
+    if isinstance(delivery_modes, list):
+        pass
+    elif delivery_modes is not None and not isinstance(delivery_modes, list):
+        try:
+            import json
+            delivery_modes = json.loads(delivery_modes) if isinstance(delivery_modes, str) else delivery_modes
+        except Exception:
+            delivery_modes = []
+    else:
+        delivery_modes = []
     return Course(
         id=str(row["id"]),
         title=row["title"],
@@ -41,6 +52,7 @@ def _row_to_course(row: dict) -> Course:
         display_order=int(row.get("display_order") or 0),
         created_at=row.get("created_at"),
         updated_at=row.get("updated_at"),
+        delivery_modes=delivery_modes if isinstance(delivery_modes, list) else [],
     )
 
 
@@ -65,6 +77,7 @@ class CourseRepository(ICourseRepository):
         result["audience"] = self._get_audience(course_id)
         result["career_outcomes"] = self._get_career_outcomes(course_id)
         result["certificate"] = self._get_certificate(course_id)
+        result["classes"] = self._get_classes(course_id)
         return result
 
     def _get_highlights(self, course_id: str) -> List[dict]:
@@ -177,7 +190,7 @@ class CourseRepository(ICourseRepository):
         )
         if not row:
             return None
-        return {
+        out = {
             "id": str(row["id"]),
             "course_id": str(row["course_id"]),
             "title": row.get("title"),
@@ -185,6 +198,39 @@ class CourseRepository(ICourseRepository):
             "description": row.get("description"),
             "image_url": row.get("image_url"),
         }
+        if "external_config" in row and row["external_config"] is not None:
+            out["external_config"] = row["external_config"] if isinstance(row["external_config"], dict) else {}
+        if "completion_rules" in row and row["completion_rules"] is not None:
+            out["completion_rules"] = row["completion_rules"] if isinstance(row["completion_rules"], dict) else {}
+        return out
+
+    def _get_classes(self, course_id: str) -> List[dict]:
+        rows = execute_query(
+            "SELECT * FROM course_classes WHERE course_id = %s ORDER BY sort_order, id",
+            (course_id,),
+            fetch="all",
+        )
+        if not rows:
+            return []
+        result = []
+        for r in rows:
+            result.append({
+                "id": str(r["id"]),
+                "course_id": str(r["course_id"]),
+                "title": r.get("title", ""),
+                "description": r.get("description"),
+                "class_type": r.get("class_type", "recorded"),
+                "duration_minutes": r.get("duration_minutes"),
+                "start_time": r["start_time"].isoformat() if r.get("start_time") else None,
+                "end_time": r["end_time"].isoformat() if r.get("end_time") else None,
+                "zoom_link": r.get("zoom_link"),
+                "location": r.get("location"),
+                "recording_material_id": str(r["recording_material_id"]) if r.get("recording_material_id") else None,
+                "event_id": str(r["event_id"]) if r.get("event_id") else None,
+                "sort_order": r.get("sort_order", 0),
+                "created_at": r["created_at"].isoformat() if r.get("created_at") else None,
+            })
+        return result
 
     def list(
         self,
@@ -221,12 +267,18 @@ class CourseRepository(ICourseRepository):
 
     def create(self, course: Course, children: Dict[str, Any]) -> Course:
         """Create course and all child rows."""
+        import json
+        delivery_modes = getattr(course, "delivery_modes", None) or []
+        if isinstance(delivery_modes, list):
+            delivery_modes_json = json.dumps(delivery_modes)
+        else:
+            delivery_modes_json = json.dumps([])
         execute_query(
             """
             INSERT INTO courses (
                 id, title, slug, short_description, full_description,
-                status, display_order, created_at, updated_at
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, NOW(), NOW())
+                status, display_order, delivery_modes, created_at, updated_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s::jsonb, NOW(), NOW())
             """,
             (
                 course.id,
@@ -236,6 +288,7 @@ class CourseRepository(ICourseRepository):
                 course.full_description,
                 course.status.value if course.status else CourseStatus.DRAFT.value,
                 course.display_order,
+                delivery_modes_json,
             ),
             fetch="none",
         )
@@ -302,11 +355,14 @@ class CourseRepository(ICourseRepository):
             )
 
         cert = children.get("certificate")
-        if cert and (cert.get("title") or cert.get("provider") or cert.get("description") or cert.get("image_url")):
+        if cert and (cert.get("title") or cert.get("provider") or cert.get("description") or cert.get("image_url") or cert.get("external_config") or cert.get("completion_rules")):
+            import json
+            ext_cfg = cert.get("external_config")
+            comp_rules = cert.get("completion_rules")
             execute_query(
                 """
-                INSERT INTO course_certificate (id, course_id, title, provider, description, image_url)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO course_certificate (id, course_id, title, provider, description, image_url, external_config, completion_rules)
+                VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb)
                 """,
                 (
                     str(uuid.uuid4()),
@@ -315,6 +371,47 @@ class CourseRepository(ICourseRepository):
                     cert.get("provider"),
                     cert.get("description"),
                     cert.get("image_url"),
+                    json.dumps(ext_cfg) if ext_cfg else None,
+                    json.dumps(comp_rules) if comp_rules else None,
+                ),
+                fetch="none",
+            )
+
+        for i, cl in enumerate(children.get("classes") or []):
+            cid = str(uuid.uuid4())
+            start_ts = cl.get("start_time")
+            end_ts = cl.get("end_time")
+            if isinstance(start_ts, str) and "T" in start_ts:
+                try:
+                    from dateutil import parser as date_parser
+                    start_ts = date_parser.parse(start_ts)
+                except Exception:
+                    start_ts = None
+            if isinstance(end_ts, str) and "T" in end_ts:
+                try:
+                    from dateutil import parser as date_parser
+                    end_ts = date_parser.parse(end_ts)
+                except Exception:
+                    end_ts = None
+            execute_query(
+                """
+                INSERT INTO course_classes (id, course_id, title, description, class_type, duration_minutes, start_time, end_time, zoom_link, location, recording_material_id, event_id, sort_order)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    cid,
+                    course_id,
+                    cl.get("title", ""),
+                    cl.get("description"),
+                    cl.get("class_type", "recorded"),
+                    cl.get("duration_minutes"),
+                    start_ts,
+                    end_ts,
+                    cl.get("zoom_link"),
+                    cl.get("location"),
+                    cl.get("recording_material_id"),
+                    cl.get("event_id"),
+                    cl.get("sort_order", i),
                 ),
                 fetch="none",
             )
@@ -328,11 +425,14 @@ class CourseRepository(ICourseRepository):
         if not existing:
             return None
 
+        import json
+        delivery_modes = getattr(course, "delivery_modes", None) or []
+        delivery_modes_json = json.dumps(delivery_modes) if isinstance(delivery_modes, list) else "[]"
         execute_query(
             """
             UPDATE courses SET
                 title = %s, slug = %s, short_description = %s, full_description = %s,
-                status = %s, display_order = %s, updated_at = NOW()
+                status = %s, display_order = %s, delivery_modes = %s::jsonb, updated_at = NOW()
             WHERE id = %s
             """,
             (
@@ -342,6 +442,7 @@ class CourseRepository(ICourseRepository):
                 course.full_description,
                 course.status.value if course.status else CourseStatus.DRAFT.value,
                 course.display_order,
+                delivery_modes_json,
                 course_id,
             ),
             fetch="none",
@@ -349,6 +450,7 @@ class CourseRepository(ICourseRepository):
 
         execute_query("DELETE FROM course_highlights WHERE course_id = %s", (course_id,), fetch="none")
         execute_query("DELETE FROM course_phases WHERE course_id = %s", (course_id,), fetch="none")
+        execute_query("DELETE FROM course_classes WHERE course_id = %s", (course_id,), fetch="none")
         execute_query("DELETE FROM course_benefits WHERE course_id = %s", (course_id,), fetch="none")
         execute_query("DELETE FROM course_audience WHERE course_id = %s", (course_id,), fetch="none")
         execute_query("DELETE FROM course_career_outcomes WHERE course_id = %s", (course_id,), fetch="none")
@@ -415,11 +517,13 @@ class CourseRepository(ICourseRepository):
             )
 
         cert = children.get("certificate")
-        if cert and (cert.get("title") or cert.get("provider") or cert.get("description") or cert.get("image_url")):
+        if cert and (cert.get("title") or cert.get("provider") or cert.get("description") or cert.get("image_url") or cert.get("external_config") or cert.get("completion_rules")):
+            ext_cfg = cert.get("external_config")
+            comp_rules = cert.get("completion_rules")
             execute_query(
                 """
-                INSERT INTO course_certificate (id, course_id, title, provider, description, image_url)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO course_certificate (id, course_id, title, provider, description, image_url, external_config, completion_rules)
+                VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb)
                 """,
                 (
                     str(uuid.uuid4()),
@@ -428,6 +532,47 @@ class CourseRepository(ICourseRepository):
                     cert.get("provider"),
                     cert.get("description"),
                     cert.get("image_url"),
+                    json.dumps(ext_cfg) if ext_cfg else None,
+                    json.dumps(comp_rules) if comp_rules else None,
+                ),
+                fetch="none",
+            )
+
+        for i, cl in enumerate(children.get("classes") or []):
+            cid = str(cl.get("id") or uuid.uuid4())
+            start_ts = cl.get("start_time")
+            end_ts = cl.get("end_time")
+            if isinstance(start_ts, str) and "T" in start_ts:
+                try:
+                    from dateutil import parser as date_parser
+                    start_ts = date_parser.parse(start_ts)
+                except Exception:
+                    start_ts = None
+            if isinstance(end_ts, str) and "T" in end_ts:
+                try:
+                    from dateutil import parser as date_parser
+                    end_ts = date_parser.parse(end_ts)
+                except Exception:
+                    end_ts = None
+            execute_query(
+                """
+                INSERT INTO course_classes (id, course_id, title, description, class_type, duration_minutes, start_time, end_time, zoom_link, location, recording_material_id, event_id, sort_order)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    cid,
+                    course_id,
+                    cl.get("title", ""),
+                    cl.get("description"),
+                    cl.get("class_type", "recorded"),
+                    cl.get("duration_minutes"),
+                    start_ts,
+                    end_ts,
+                    cl.get("zoom_link"),
+                    cl.get("location"),
+                    cl.get("recording_material_id"),
+                    cl.get("event_id"),
+                    cl.get("sort_order", i),
                 ),
                 fetch="none",
             )
@@ -441,20 +586,153 @@ class CourseRepository(ICourseRepository):
         logger.info("Deleted course: %s", course_id)
         return True
 
-    def register(self, course_id: str, user_id: str) -> bool:
+    def register(self, course_id: str, user_id: str, status: str = "registered", source: Optional[str] = None) -> bool:
         """Register user for course (idempotent)."""
         reg_id = str(uuid.uuid4())
         try:
             execute_query(
                 """
-                INSERT INTO course_registrations (id, course_id, user_id)
-                VALUES (%s, %s, %s)
-                ON CONFLICT (course_id, user_id) DO NOTHING
+                INSERT INTO course_registrations (id, course_id, user_id, status, updated_at, source)
+                VALUES (%s, %s, %s, %s, NOW(), %s)
+                ON CONFLICT (course_id, user_id) DO UPDATE SET status = EXCLUDED.status, updated_at = NOW(), source = COALESCE(EXCLUDED.source, course_registrations.source)
                 """,
-                (reg_id, course_id, user_id),
+                (reg_id, course_id, user_id, status, source),
                 fetch="none",
             )
         except Exception as e:
             logger.warning("Course registration insert: %s", e)
             return False
         return True
+
+    def mark_interest(self, course_id: str, user_id: str, source: Optional[str] = "mobile") -> bool:
+        """Mark user as interested in course (upsert with status=interested)."""
+        return self.register(course_id, user_id, status="interested", source=source)
+
+    def list_registrations(self, course_id: str, status_filter: Optional[str] = None) -> List[Dict[str, Any]]:
+        """List all registrations for a course, with user details."""
+        if status_filter:
+            rows = execute_query(
+                """
+                SELECT cr.*, u.name, u.email, u.user_type
+                FROM course_registrations cr
+                JOIN users u ON u.id = cr.user_id
+                WHERE cr.course_id = %s AND cr.status = %s
+                ORDER BY cr.created_at DESC
+                """,
+                (course_id, status_filter),
+                fetch="all",
+            )
+        else:
+            rows = execute_query(
+                """
+                SELECT cr.*, u.name, u.email, u.user_type
+                FROM course_registrations cr
+                JOIN users u ON u.id = cr.user_id
+                WHERE cr.course_id = %s
+                ORDER BY cr.created_at DESC
+                """,
+                (course_id,),
+                fetch="all",
+            )
+        if not rows:
+            return []
+        return [
+            {
+                "id": str(r["id"]),
+                "course_id": str(r["course_id"]),
+                "user_id": str(r["user_id"]),
+                "status": r.get("status", "registered"),
+                "created_at": r["created_at"].isoformat() if r.get("created_at") else None,
+                "updated_at": r["updated_at"].isoformat() if r.get("updated_at") else None,
+                "notes": r.get("notes"),
+                "source": r.get("source"),
+                "name": r.get("name"),
+                "email": r.get("email"),
+                "user_type": r.get("user_type"),
+            }
+            for r in (rows or [])
+        ]
+
+    def list_user_registrations(self, user_id: str) -> List[Dict[str, Any]]:
+        """List courses the user is registered/interested in."""
+        rows = execute_query(
+            """
+            SELECT cr.*, c.title as course_title
+            FROM course_registrations cr
+            JOIN courses c ON c.id = cr.course_id
+            WHERE cr.user_id = %s
+            ORDER BY cr.updated_at DESC, cr.created_at DESC
+            """,
+            (user_id,),
+            fetch="all",
+        )
+        if not rows:
+            return []
+        return [
+            {
+                "id": str(r["id"]),
+                "course_id": str(r["course_id"]),
+                "user_id": str(r["user_id"]),
+                "status": r.get("status", "registered"),
+                "created_at": r["created_at"].isoformat() if r.get("created_at") else None,
+                "updated_at": r["updated_at"].isoformat() if r.get("updated_at") else None,
+                "notes": r.get("notes"),
+                "source": r.get("source"),
+                "course_title": r.get("course_title"),
+            }
+            for r in (rows or [])
+        ]
+
+    def list_all_registrations_by_status(self, status: str) -> List[Dict[str, Any]]:
+        """List all registrations across courses with given status (e.g. interested)."""
+        rows = execute_query(
+            """
+            SELECT cr.*, c.title as course_title
+            FROM course_registrations cr
+            JOIN courses c ON c.id = cr.course_id
+            WHERE cr.status = %s
+            ORDER BY cr.created_at DESC
+            """,
+            (status,),
+            fetch="all",
+        )
+        if not rows:
+            return []
+        out = []
+        for r in rows:
+            u = execute_query("SELECT name, email, user_type FROM users WHERE id = %s", (r["user_id"],), fetch="one")
+            out.append({
+                "id": str(r["id"]),
+                "course_id": str(r["course_id"]),
+                "user_id": str(r["user_id"]),
+                "status": r.get("status"),
+                "created_at": r["created_at"].isoformat() if r.get("created_at") else None,
+                "updated_at": r["updated_at"].isoformat() if r.get("updated_at") else None,
+                "notes": r.get("notes"),
+                "source": r.get("source"),
+                "course_title": r.get("course_title"),
+                "name": u.get("name") if u else None,
+                "email": u.get("email") if u else None,
+                "user_type": u.get("user_type") if u else None,
+            })
+        return out
+
+    def update_registration_status(self, course_id: str, user_id: str, status: str, notes: Optional[str] = None) -> bool:
+        """Update registration status (admin)."""
+        try:
+            if notes is not None:
+                execute_query(
+                    "UPDATE course_registrations SET status = %s, notes = %s, updated_at = NOW() WHERE course_id = %s AND user_id = %s",
+                    (status, notes, course_id, user_id),
+                    fetch="none",
+                )
+            else:
+                execute_query(
+                    "UPDATE course_registrations SET status = %s, updated_at = NOW() WHERE course_id = %s AND user_id = %s",
+                    (status, course_id, user_id),
+                    fetch="none",
+                )
+            return True
+        except Exception as e:
+            logger.warning("Update registration status: %s", e)
+            return False

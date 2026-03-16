@@ -71,6 +71,15 @@ export default function CoursesPage() {
                     >
                       {course.status}
                     </span>
+                    {(course as any).delivery_modes?.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {((course as any).delivery_modes as string[]).map((m: string) => (
+                          <span key={m} className="inline-flex rounded px-1.5 py-0.5 text-xs bg-blue-50 text-blue-700 capitalize">
+                            {String(m).replace('_', ' ')}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">{course.display_order ?? 0}</td>
                   <td className="px-4 py-3 text-right">

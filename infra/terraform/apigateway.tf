@@ -123,6 +123,15 @@ resource "aws_apigatewayv2_route" "events_id_delete" {
   target             = "integrations/${aws_apigatewayv2_integration.events.id}"
 }
 
+# Phase 3: event calendar .ics
+resource "aws_apigatewayv2_route" "events_id_calendar_ics_get" {
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "GET /events/{event_id}/calendar.ics"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  target             = "integrations/${aws_apigatewayv2_integration.events.id}"
+}
+
 resource "aws_apigatewayv2_route" "events_join_post" {
   api_id             = aws_apigatewayv2_api.main.id
   route_key          = "POST /events/{event_id}/join"
@@ -281,6 +290,15 @@ resource "aws_apigatewayv2_route" "courses_get" {
   target             = "integrations/${aws_apigatewayv2_integration.courses.id}"
 }
 
+# Phase 3: course enquiries (literal path before /courses/{course_id} so "enquiries" is not captured as course_id)
+resource "aws_apigatewayv2_route" "courses_enquiries_get" {
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "GET /courses/enquiries"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  target             = "integrations/${aws_apigatewayv2_integration.courses.id}"
+}
+
 resource "aws_apigatewayv2_route" "courses_post" {
   api_id             = aws_apigatewayv2_api.main.id
   route_key          = "POST /courses"
@@ -316,6 +334,48 @@ resource "aws_apigatewayv2_route" "courses_id_delete" {
 resource "aws_apigatewayv2_route" "courses_id_register_post" {
   api_id             = aws_apigatewayv2_api.main.id
   route_key          = "POST /courses/{course_id}/register"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  target             = "integrations/${aws_apigatewayv2_integration.courses.id}"
+}
+
+# Phase 3: course interest, registrations, calendar.ics
+resource "aws_apigatewayv2_route" "courses_id_interest_post" {
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "POST /courses/{course_id}/interest"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  target             = "integrations/${aws_apigatewayv2_integration.courses.id}"
+}
+
+resource "aws_apigatewayv2_route" "courses_id_registrations_get" {
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "GET /courses/{course_id}/registrations"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  target             = "integrations/${aws_apigatewayv2_integration.courses.id}"
+}
+
+resource "aws_apigatewayv2_route" "courses_id_registrations_put" {
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "PUT /courses/{course_id}/registrations"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  target             = "integrations/${aws_apigatewayv2_integration.courses.id}"
+}
+
+resource "aws_apigatewayv2_route" "courses_id_calendar_ics_get" {
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "GET /courses/{course_id}/calendar.ics"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  target             = "integrations/${aws_apigatewayv2_integration.courses.id}"
+}
+
+# Phase 3: my courses (me/courses -> courses lambda)
+resource "aws_apigatewayv2_route" "me_courses_get" {
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "GET /me/courses"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
   target             = "integrations/${aws_apigatewayv2_integration.courses.id}"
@@ -358,6 +418,15 @@ resource "aws_apigatewayv2_route" "users_me_get" {
 resource "aws_apigatewayv2_route" "users_me_put" {
   api_id             = aws_apigatewayv2_api.main.id
   route_key          = "PUT /users/me"
+  authorization_type = "JWT"
+  authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
+  target             = "integrations/${aws_apigatewayv2_integration.users.id}"
+}
+
+# Phase 3: privacy consent
+resource "aws_apigatewayv2_route" "users_me_privacy_consent_post" {
+  api_id             = aws_apigatewayv2_api.main.id
+  route_key          = "POST /users/me/privacy-consent"
   authorization_type = "JWT"
   authorizer_id      = aws_apigatewayv2_authorizer.cognito.id
   target             = "integrations/${aws_apigatewayv2_integration.users.id}"

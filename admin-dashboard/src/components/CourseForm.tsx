@@ -11,9 +11,12 @@ import type {
   CourseAudience,
   CourseCareerOutcome,
   CourseCertificate,
+  CourseClass,
+  ClassType,
 } from '@/types/course';
 
 const emptyHighlight: CourseHighlight = { label: '', value: '' };
+const emptyClass: CourseClass = { title: '', class_type: 'recorded', sort_order: 0 };
 const emptyPhase: CoursePhase = { title: '', subtitle: '', phase_items: [] };
 const emptyPhaseItem: CoursePhaseItem = { item_type: 'what_you_learn', text: '' };
 const emptyBenefit: CourseBenefit = { title: '', description: '' };
@@ -27,6 +30,8 @@ type FormData = Partial<Course> & {
   audience?: CourseAudience[];
   career_outcomes?: CourseCareerOutcome[];
   certificate?: CourseCertificate | null;
+  delivery_modes?: ClassType[];
+  classes?: CourseClass[];
 };
 
 interface CourseFormProps {
@@ -64,6 +69,10 @@ export function CourseForm({
       ? { ...initial.certificate }
       : { title: '', provider: '', description: '', image_url: '' }
   );
+  const [deliveryModes, setDeliveryModes] = useState<ClassType[]>(
+    (initial?.delivery_modes as ClassType[] | undefined) ?? (initial as any)?.deliveryModes ?? []
+  );
+  const [classes, setClasses] = useState<CourseClass[]>(initial?.classes?.length ? [...initial.classes] : []);
   const [error, setError] = useState('');
 
   const addHighlight = () => setHighlights((h) => [...h, { ...emptyHighlight }]);
@@ -122,6 +131,17 @@ export function CourseForm({
     setCareerOutcomes((c) => c.map((x, idx) => (idx === i ? { ...x, text: value } : x)));
   };
 
+  const toggleDeliveryMode = (mode: ClassType) => {
+    setDeliveryModes((prev) =>
+      prev.includes(mode) ? prev.filter((m) => m !== mode) : [...prev, mode]
+    );
+  };
+  const addClass = () => setClasses((c) => [...c, { ...emptyClass, sort_order: c.length }]);
+  const removeClass = (i: number) => setClasses((c) => c.filter((_, idx) => idx !== i));
+  const updateClass = (i: number, field: keyof CourseClass, value: string | number | undefined) => {
+    setClasses((c) => c.map((x, idx) => (idx === i ? { ...x, [field]: value } : x)));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -141,6 +161,7 @@ export function CourseForm({
         full_description: fullDescription.trim() || undefined,
         status,
         display_order: displayOrder,
+        delivery_modes: deliveryModes.length ? deliveryModes : undefined,
         highlights: highlights.filter((h) => h.label.trim() || h.value.trim()),
         phases: phases.map((p) => ({
           ...p,
@@ -150,6 +171,7 @@ export function CourseForm({
         audience: audience.filter((a) => a.title.trim()),
         career_outcomes: careerOutcomes.filter((c) => c.text.trim()),
         certificate: certPayload,
+        classes: classes.map((cl, i) => ({ ...cl, sort_order: i })),
       });
     } catch (err: any) {
       setError(err?.response?.data?.message || err?.message || 'Failed to save.');
@@ -229,7 +251,73 @@ export function CourseForm({
                 min={0}
               />
             </div>
+          <div>
+            <label className={labelCls}>Delivery modes</label>
+            <div className="flex flex-wrap gap-3 mt-1">
+              {(['recorded', 'online', 'in_person'] as ClassType[]).map((mode) => (
+                <label key={mode} className="inline-flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={deliveryModes.includes(mode)}
+                    onChange={() => toggleDeliveryMode(mode)}
+                    className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <span className="text-sm capitalize">{mode.replace('_', ' ')}</span>
+                </label>
+              ))}
+            </div>
           </div>
+        </div>
+      </section>
+
+      <section className={sectionCls}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Classes / Sessions</h2>
+          <button type="button" onClick={addClass} className="text-sm text-primary-600 hover:text-primary-700 flex items-center gap-1">
+            <Plus size={16} /> Add class
+          </button>
+        </div>
+        <p className="text-sm text-gray-500 mb-4">Add sessions with type: Recorded, Online (Zoom), or In-person. Each can have duration, schedule, and links.</p>
+        <div className="space-y-4">
+          {classes.map((cl, i) => (
+            <div key={i} className="border border-gray-200 rounded-lg p-4 space-y-3 bg-gray-50/50">
+              <div className="flex gap-2 flex-wrap items-center">
+                <input
+                  type="text"
+                  value={cl.title}
+                  onChange={(e) => updateClass(i, 'title', e.target.value)}
+                  className={inputCls + ' flex-1 min-w-[200px]'}
+                  placeholder="Class title"
+                />
+                <select
+                  value={cl.class_type}
+                  onChange={(e) => updateClass(i, 'class_type', e.target.value as ClassType)}
+                  className={inputCls + ' w-36'}
+                >
+                  <option value="recorded">Recorded</option>
+                  <option value="online">Online</option>
+                  <option value="in_person">In person</option>
+                </select>
+                <input
+                  type="number"
+                  value={cl.duration_minutes ?? ''}
+                  onChange={(e) => updateClass(i, 'duration_minutes', e.target.value ? parseInt(e.target.value, 10) : undefined)}
+                  className={inputCls + ' w-24'}
+                  placeholder="Min"
+                />
+                <button type="button" onClick={() => removeClass(i)} className="p-2 text-red-600 hover:bg-red-50 rounded">
+                  <Trash2 size={18} />
+                </button>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+                <input type="datetime-local" value={cl.start_time?.slice(0, 16) ?? ''} onChange={(e) => updateClass(i, 'start_time', e.target.value ? new Date(e.target.value).toISOString() : undefined)} className={inputCls} placeholder="Start" />
+                <input type="datetime-local" value={cl.end_time?.slice(0, 16) ?? ''} onChange={(e) => updateClass(i, 'end_time', e.target.value ? new Date(e.target.value).toISOString() : undefined)} className={inputCls} placeholder="End" />
+                {cl.class_type === 'online' && <input type="url" value={cl.zoom_link ?? ''} onChange={(e) => updateClass(i, 'zoom_link', e.target.value || undefined)} className={inputCls + ' sm:col-span-2'} placeholder="Zoom link" />}
+                {cl.class_type === 'in_person' && <input type="text" value={cl.location ?? ''} onChange={(e) => updateClass(i, 'location', e.target.value || undefined)} className={inputCls + ' sm:col-span-2'} placeholder="Venue / location" />}
+                <input type="text" value={cl.description ?? ''} onChange={(e) => updateClass(i, 'description', e.target.value || undefined)} className={inputCls + ' sm:col-span-2'} placeholder="Description (optional)" />
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 

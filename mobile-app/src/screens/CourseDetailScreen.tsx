@@ -11,11 +11,14 @@ import {
   Alert,
   Platform,
   RefreshControl,
+  Share,
+  Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useCourse, useRegisterCourse } from '@/hooks/useCourses';
+import { useCourse, useRegisterCourse, useMarkCourseInterest } from '@/hooks/useCourses';
 import { colors, spacing, borderRadius } from '@/theme/colors';
-import type { CoursePhase } from '@/types/course';
+import { api } from '@/services/api';
+import type { CoursePhase, CourseClass } from '@/types/course';
 
 const cardShadow = Platform.select({
   ios: {
@@ -37,7 +40,9 @@ interface CourseDetailScreenProps {
 export function CourseDetailScreen({ courseId, onBack }: CourseDetailScreenProps) {
   const { data: course, isLoading, error, refetch, isRefetching } = useCourse(courseId);
   const registerCourse = useRegisterCourse();
+  const markInterest = useMarkCourseInterest();
   const [registered, setRegistered] = useState(false);
+  const [interested, setInterested] = useState(false);
 
   const handleRegister = async () => {
     try {
@@ -48,6 +53,31 @@ export function CourseDetailScreen({ courseId, onBack }: CourseDetailScreenProps
       const msg =
         err?.response?.data?.message ?? err?.response?.data?.error ?? 'Failed to register for course.';
       Alert.alert('Error', msg);
+    }
+  };
+
+  const handleInterest = async () => {
+    try {
+      await markInterest.mutateAsync(courseId);
+      setInterested(true);
+      Alert.alert('Done', "You're marked as interested. We'll be in touch.");
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ?? err?.response?.data?.error ?? 'Failed to mark interest.';
+      Alert.alert('Error', msg);
+    }
+  };
+
+  const handleAddToCalendar = async () => {
+    try {
+      const ics = await api.getCourseCalendarIcs(courseId);
+      await Share.share({
+        message: ics,
+        title: `${course?.title ?? 'Course'} schedule`,
+        type: 'text/calendar',
+      });
+    } catch (e) {
+      Alert.alert('Error', 'Could not load calendar. Try again later.');
     }
   };
 
@@ -206,28 +236,86 @@ export function CourseDetailScreen({ courseId, onBack }: CourseDetailScreenProps
           </View>
         )}
 
+        {(course as any).classes?.length > 0 && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Class schedule</Text>
+            <View style={styles.benefitsCard}>
+              {((course as any).classes as CourseClass[]).map((cl: CourseClass, i: number) => (
+                <View key={cl.id ?? i} style={[styles.bulletItem, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }]}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 }}>
+                    <View style={{
+                      paddingHorizontal: 8,
+                      paddingVertical: 4,
+                      borderRadius: 6,
+                      backgroundColor: cl.class_type === 'recorded' ? '#e9d5ff' : cl.class_type === 'online' ? '#dbeafe' : '#fef3c7',
+                    }}>
+                      <Text style={{ fontSize: 11, fontWeight: '600', textTransform: 'capitalize' }}>
+                        {cl.class_type.replace('_', ' ')}
+                      </Text>
+                    </View>
+                    <Text style={styles.bulletTitle}>{cl.title}</Text>
+                    {cl.duration_minutes != null && (
+                      <Text style={[styles.bulletDesc, { marginLeft: 4 }]}>{cl.duration_minutes} min</Text>
+                    )}
+                  </View>
+                </View>
+              ))}
+            </View>
+            <TouchableOpacity
+              style={[styles.registerBtn, { marginTop: 12, backgroundColor: colors.border }]}
+              onPress={handleAddToCalendar}
+              activeOpacity={0.75}
+            >
+              <Ionicons name="calendar-outline" size={20} color={colors.text} />
+              <Text style={[styles.registerBtnText, { color: colors.text }]}>Add to Calendar (.ics)</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View style={styles.registerSection}>
           {registered ? (
             <View style={[styles.registerBtn, styles.registeredBtn]}>
               <Ionicons name="checkmark-circle" size={22} color={colors.success} />
               <Text style={styles.registeredText}>Registered</Text>
             </View>
+          ) : interested ? (
+            <View style={[styles.registerBtn, styles.registeredBtn, { backgroundColor: '#dbeafe' }]}>
+              <Ionicons name="heart" size={22} color="#1d4ed8" />
+              <Text style={[styles.registeredText, { color: '#1d4ed8' }]}>Interested – we&apos;ll be in touch</Text>
+            </View>
           ) : (
-            <TouchableOpacity
-              style={styles.registerBtn}
-              onPress={handleRegister}
-              disabled={registerCourse.isPending}
-              activeOpacity={0.75}
-            >
-              {registerCourse.isPending ? (
-                <ActivityIndicator size="small" color={colors.white} />
-              ) : (
-                <>
-                  <Ionicons name="book-outline" size={22} color={colors.white} />
-                  <Text style={styles.registerBtnText}>Register to this course</Text>
-                </>
-              )}
-            </TouchableOpacity>
+            <>
+              <TouchableOpacity
+                style={[styles.registerBtn, { marginBottom: 10 }]}
+                onPress={handleRegister}
+                disabled={registerCourse.isPending}
+                activeOpacity={0.75}
+              >
+                {registerCourse.isPending ? (
+                  <ActivityIndicator size="small" color={colors.white} />
+                ) : (
+                  <>
+                    <Ionicons name="book-outline" size={22} color={colors.white} />
+                    <Text style={styles.registerBtnText}>Register to this course</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.registerBtn, { backgroundColor: colors.border }]}
+                onPress={handleInterest}
+                disabled={markInterest.isPending}
+                activeOpacity={0.75}
+              >
+                {markInterest.isPending ? (
+                  <ActivityIndicator size="small" color={colors.text} />
+                ) : (
+                  <>
+                    <Ionicons name="heart-outline" size={22} color={colors.text} />
+                    <Text style={[styles.registerBtnText, { color: colors.text }]}>I&apos;m Interested</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </>
           )}
         </View>
 

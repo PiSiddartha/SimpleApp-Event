@@ -19,9 +19,10 @@ interface ProfileScreenProps {
   onBack: () => void;
   onLogout: () => void;
   onEditProfile: () => void;
+  onPrivacyPolicy?: () => void;
 }
 
-export function ProfileScreen({ onBack, onLogout, onEditProfile }: ProfileScreenProps) {
+export function ProfileScreen({ onBack, onLogout, onEditProfile, onPrivacyPolicy }: ProfileScreenProps) {
   const [user, setUser] = useState<StoredUserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -176,6 +177,17 @@ export function ProfileScreen({ onBack, onLogout, onEditProfile }: ProfileScreen
             </View>
           </View>
         </View>
+
+        {onPrivacyPolicy && (
+          <TouchableOpacity
+            style={[styles.editButton, { marginTop: 8 }]}
+            onPress={onPrivacyPolicy}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="document-text-outline" size={18} color={colors.primary} />
+            <Text style={styles.editButtonText}>Privacy Policy</Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           style={styles.signOutButton}

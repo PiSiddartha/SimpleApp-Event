@@ -171,6 +171,42 @@ class ApiService {
     const response = await this.client.post(`/courses/${courseId}/register`, {});
     return response.data;
   }
+
+  async markCourseInterest(courseId: string) {
+    const response = await this.client.post(`/courses/${courseId}/interest`, {});
+    return response.data;
+  }
+
+  async getMyCourses() {
+    const response = await this.client.get('/me/courses');
+    const raw = response.data as { courses?: unknown[] };
+    return raw?.courses ?? [];
+  }
+
+  async getCourseCalendarIcs(courseId: string): Promise<string> {
+    const token = await authService.getToken();
+    const url = `${this.client.defaults.baseURL}/courses/${courseId}/calendar.ics`;
+    const res = await fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new Error('Failed to get calendar');
+    return res.text();
+  }
+
+  async getEventCalendarIcs(eventId: string): Promise<string> {
+    const token = await authService.getToken();
+    const url = `${this.client.defaults.baseURL}/events/${eventId}/calendar.ics`;
+    const res = await fetch(url, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new Error('Failed to get calendar');
+    return res.text();
+  }
+
+  async submitPrivacyConsent(version: string) {
+    const response = await this.client.post('/users/me/privacy-consent', { version });
+    return response.data;
+  }
 }
 
 export const api = new ApiService();

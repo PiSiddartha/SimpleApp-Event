@@ -166,6 +166,7 @@ Source:
 - `DELETE /events/{event_id}`
 - `POST /events/{event_id}/join`
 - `GET /events/{event_id}/analytics`
+- `GET /events/{event_id}/calendar.ics` (Phase 3: .ics calendar download)
 
 ### Attendance
 
@@ -195,6 +196,21 @@ Source:
 - `GET /analytics/overview`
 - `GET /analytics/student/{student_id}`
 
+### Courses (Phase 3 additions)
+
+- `GET /courses`
+- `POST /courses`
+- `GET /courses/{course_id}`
+- `PUT /courses/{course_id}`
+- `DELETE /courses/{course_id}`
+- `POST /courses/{course_id}/register`
+- `GET /courses/enquiries` (admin: list all interested registrations)
+- `GET /me/courses` (auth: current user's course registrations)
+- `POST /courses/{course_id}/interest` (auth: mark interested)
+- `GET /courses/{course_id}/registrations` (admin: list registrations for course)
+- `PUT /courses/{course_id}/registrations` (admin: update registration status/notes)
+- `GET /courses/{course_id}/calendar.ics` (Phase 3: .ics for course classes)
+
 ### Users
 
 - `GET /admin-users`
@@ -202,6 +218,7 @@ Source:
 - `GET /users`
 - `GET /users/me`
 - `PUT /users/me`
+- `POST /users/me/privacy-consent` (Phase 3: record privacy policy acceptance)
 
 ## Authentication and Roles
 
