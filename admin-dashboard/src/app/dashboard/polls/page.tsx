@@ -85,7 +85,7 @@ export default function PollsPage() {
                   <p className="text-sm text-gray-500 mt-1">Event ID: {poll.event_id}</p>
                   {poll.material_id && (
                     <p className="text-sm text-primary-600 mt-0.5">
-                      Related: {materialTitleById.get(poll.material_id) ?? 'Material'}
+                      Related: {String(materialTitleById.get(poll.material_id) ?? 'Material')}
                     </p>
                   )}
                 </div>

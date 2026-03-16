@@ -184,6 +184,7 @@ export function CourseForm({
   const sectionCls = 'rounded-xl border border-gray-200 bg-white p-6 shadow-sm';
 
   return (
+    <>
     <form onSubmit={handleSubmit} className="space-y-8">
       <section className={sectionCls}>
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Basic info</h2>
@@ -251,6 +252,7 @@ export function CourseForm({
                 min={0}
               />
             </div>
+          </div>
           <div>
             <label className={labelCls}>Delivery modes</label>
             <div className="flex flex-wrap gap-3 mt-1">
@@ -562,5 +564,6 @@ export function CourseForm({
         </button>
       </div>
     </form>
+    </>
   );
 }
